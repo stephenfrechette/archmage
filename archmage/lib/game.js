@@ -49,20 +49,34 @@ function onSocketConnection (client) {
   client.on('move player', onMovePlayer)
   if (playernum === 2) {
     socket.emit('spawn boss')
-    setInterval(spawnTree, 5000)
-    setInterval(forwardFirewall, 8000)
-    setTimeout(splitFireOffset, 24000)
+    setTimeout(Phase1MainLoop, 5000)
   }
   client.on('waterfire', waterfire)
   client.on('hitBoss', hitBoss)
   client.on('waterWallOn', waterWallOn)
   client.on('waterWallOff', waterWallOff)
+  client.on('spearOn', spearOn)
+  client.on('fountainOn', fountainOn)
+}
+
+function Phase1MainLoop () {
+  setTimeout(spawnTree, 5000)
+  setTimeout(spawnTree, 10000)
+  setTimeout(spawnTree, 15000)
+  setTimeout(spawnTree, 20000)
+  setTimeout(spawnTree, 25000)
+  setTimeout(spawnTree, 30000)
+  setTimeout(forwardFirewall, 8000)
+  setTimeout(forwardFirewall, 16000)
+  setTimeout(forwardFirewall, 24000)
+  setTimeout(splitFireWarning, 30000)
+  setTimeout(splitFire, 31000)
 }
 
 function spawnTree () {
   treeLoc = Math.random() * -800
   socket.emit('tree', treeLoc)
-  setTimeout(function(){ tree2(treeLoc); }, 3000)
+  setTimeout(function(){ tree2(treeLoc); }, 4000)
 }
 
 function tree2 (treeLoc) {
@@ -87,7 +101,7 @@ function forwardFirewall2 () {
 function forwardFirewall3 () {
   socket.emit('forwardFirewall3')
 }
-
+/*
 function splitFireOffset () {
   setTimeout(splitFireOffset2, 2000)
   setInterval(splitFireWarning, 16000)
@@ -95,7 +109,7 @@ function splitFireOffset () {
 
 function splitFireOffset2 () {
   setInterval(splitFire, 16000)
-}
+}*/
 
 function splitFire () {
   socket.emit('splitFire')
@@ -111,13 +125,29 @@ function hitBoss () {
 }
 
 function waterWallOn (waterWallx, waterWally) {
-  console.log('waterWall')
-  console.log(waterWallx, waterWally)
   socket.emit('waterWallOn2', waterWallx, waterWally)
 }
 
 function waterWallOff () {
   socket.emit('waterWallOff2')
+}
+
+function fountainOn (fountaindata) {
+  socket.emit('fountainOn', fountaindata)
+  setTimeout(fountainOff, 3000)
+}
+
+function fountainOff () {
+  socket.emit('fountainOff')
+}
+
+function spearOn (speardata) {
+  socket.emit('spearOn', speardata)
+  setTimeout(spearOff, 2000)
+}
+
+function spearOff () {
+  socket.emit('spearOff')
 }
 
 function onClientDisconnect () {

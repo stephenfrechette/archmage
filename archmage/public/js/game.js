@@ -58,6 +58,12 @@ var waterWallCheck2 = false
 var greenareaCheck = false
 var greenarea
 var fountainCheck = false
+var fountaindata = []
+var spear
+var spearCheck = false
+var spearxvel
+var spearyvel
+var speardata = []
 
 var armor = 64
 
@@ -114,6 +120,10 @@ var setEventHandlers = function () {
   socket.on('waterWallOff2', waterWallOff2)
   socket.on('splitFire', splitFire1)
   socket.on('splitFireWarning', splitFireWarning)
+  socket.on('spearOn', spearOn)
+  socket.on('spearOff', spearRemove)
+  socket.on('fountainOn', fountainOn)
+  socket.on('fountainOff', fountainCool)
 }
 
 function otherWaterfire (data) {
@@ -168,6 +178,7 @@ function bossSpawn2() {
   }
   bowser = game.add.sprite(-400, -800, 'bowser')
   bowser.scale.setTo(.1, .1)
+  bowser.anchor.setTo(.5, 0)
   game.physics.enable(bowser, Phaser.Physics.ARCADE);
   armorbar = game.add.sprite(-400, -800, 'armorbar')
   armorbar.scale.setTo(.1, .01)
@@ -229,14 +240,15 @@ function splitFire1 () {
   for (var i = 0; i < 15; i++) {
     splitFire[i] = game.add.sprite(-400, i*40 - 800, 'fire')
     splitFire[i].scale.setTo(.1)
+    splitFire[i].anchor.setTo(.5, 0)
     game.physics.enable(splitFire[i], Phaser.Physics.ARCADE);
     splitFireCheck = true
   }
   for (var i = 0; i < 2; i++) {
-    fireskull[i] = game.add.sprite(-400*i - 200, -500, 'fireskull')
+    fireskull[i] = game.add.sprite(-400*i - 200, -600, 'fireskull')
     fireskull[i].scale.setTo(.2)
-    fireskull[i].anchor.setTo(.5)
-    game.physics.enable(splitFire[i], Phaser.Physics.ARCADE);
+    fireskull[i].anchor.setTo(.5, .5)
+    game.physics.enable(fireskull[i], Phaser.Physics.ARCADE);
   }
 }
 
@@ -252,6 +264,14 @@ function waterWallOn2 (waterWallPosx, waterWallPosy) {
   }
 }
 
+function waterWallOff () {
+  waterWallCheck2 = false
+  waterWall[0].destroy()
+  waterWall[1].destroy()
+  waterWall[2].destroy()
+  socket.emit('waterWallOff')
+}
+
 function waterWallOff2 () {
   if (playernum === 2) {
     for (var i = 0; i < 3; i++) {
@@ -262,9 +282,31 @@ function waterWallOff2 () {
 }
 
 function fountainCool () {
-  console.log('fountainCool')
+  console.log('rip fountain')
   fountain.destroy()
   fountainCheck = false
+}
+
+function fountainOn (fountainPos) {
+  if (playernum === 2) {
+    fountain = game.add.sprite(fountainPos[0], fountainPos[1], 'wotorball')
+    fountain.anchor.setTo(.5)
+    fountain.scale.setTo(.4)
+    game.physics.enable(fountain, Phaser.Physics.ARCADE);
+    fountainCheck = true
+  }
+}
+
+function spearOn (spearPos) {
+  if (playernum === 1) {
+    spear = game.add.sprite(spearPos[0], spearPos[1], 'bowser')
+    spear.scale.setTo(.075)
+    spear.anchor.setTo(.5, .5)
+    game.physics.enable(spear, Phaser.Physics.ARCADE);
+    spearCheck = true
+    spearxvel = spearPos[2]
+    spearyvel = spearPos[3]
+  }
 }
 
 function onSocketConnected () {
@@ -340,6 +382,16 @@ function waterWallCool () {
 
 function fireWallDestroy (i) {
   forwardFire[i].destroy()
+}
+
+function spearRemove () {
+  spear.destroy()
+  spearCheck = false
+}
+
+function waterSpear () {
+  spear.loadTexture('wotorball')
+  spear.scale.setTo(.5)
 }
 
 function update () {
@@ -443,7 +495,9 @@ function update () {
       greenarea.destroy()
       fountainCheck = true
       greenareaCheck = false
-      setTimeout(fountainCool, 3000)
+      fountaindata[0] = fountain.x
+      fountaindata[1] = fountain.y
+      socket.emit('fountainOn', fountaindata)
     }
 
     if (game.input.activePointer.leftButton.isDown) {
@@ -451,6 +505,30 @@ function update () {
         console.log('FORE')
         waterfire.fire(player, game.input.activePointer.worldX, game.input.activePointer.worldY);
         socket.emit('waterfire', {x: game.input.activePointer.worldX, y: game.input.activePointer.worldY})
+      } else if (playernum === 2 && spearCheck === false) {
+        spear = game.add.sprite(player.x, player.y, 'bowser')
+        spear.scale.setTo(.075)
+        spear.anchor.setTo(.5, .5)
+        game.physics.enable(spear, Phaser.Physics.ARCADE);
+        spearCheck = true
+        var spearxdis = game.input.activePointer.worldX - player.x
+        var spearydis = game.input.activePointer.worldY - player.y
+        spearxvel = spearxdis / Math.sqrt(spearxdis * spearxdis + spearydis * spearydis)
+        spearyvel = spearydis / Math.sqrt(spearxdis * spearxdis + spearydis * spearydis)
+        speardata[0] = spear.x
+        speardata[1] = spear.y
+        speardata[2] = spearxvel
+        speardata[3] = spearyvel
+        socket.emit('spearOn', speardata)
+      }
+    }
+
+    if (spearCheck === true) {
+      console.log(spearxvel, spearyvel)
+      spear.x += spearxvel * 10
+      spear.y += spearyvel * 10
+      if (fountainCheck === true) {
+        game.physics.arcade.overlap(spear, fountain, waterSpear, null, this);
       }
     }
 
@@ -485,13 +563,8 @@ function update () {
         game.physics.enable(waterWall[i], Phaser.Physics.ARCADE);
       }
       socket.emit('waterWallOn', waterWallx, waterWally)
-    } else if (waterWallCheck2 === true && (game.input.activePointer.rightButton.isDown !== true || waterWall[1].x !== player.x || waterWall[1].y !== player.y - 40)) {
-      waterWallCheck2 = false
-      waterWall[0].destroy()
-      waterWall[1].destroy()
-      waterWall[2].destroy()
-      socket.emit('waterWallOff')
-      setTimeout(waterWallCool, 5000)
+      setTimeout(waterWallOff, 1000)
+      setTimeout(waterWallCool, 6000)
     }
   }
 
