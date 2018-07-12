@@ -49,7 +49,7 @@ function onSocketConnection (client) {
   client.on('move player', onMovePlayer)
   if (playernum === 2) {
     socket.emit('spawn boss')
-    setTimeout(Phase1MainLoop, 5000)
+    setTimeout(splitFire, 5000)
   }
   client.on('waterfire', waterfire)
   client.on('hitBoss', hitBoss)
