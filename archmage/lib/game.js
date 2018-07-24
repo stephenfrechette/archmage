@@ -120,7 +120,7 @@ function splitFireWarning () {
 }
 
 function hitBoss () {
-  armor = armor - 1 / armor
+  armor = armor * 1.01
   socket.emit('updateArmor', armor)
 }
 

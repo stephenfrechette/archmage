@@ -5,7 +5,7 @@ function preload () {
   game.canvas.oncontextmenu = function (e) { e.preventDefault(); }
   game.load.image('earth', 'assets/light_sand.png')
   game.load.spritesheet('dude', 'assets/dude.png', 64, 64)
-  game.load.spritesheet('enemy', 'assets/meeple.png', 64, 64)
+  game.load.spritesheet('enemy', 'assets/meeple.png', 32, 32)
   game.load.spritesheet('!', 'assets/!.png')
   game.load.spritesheet('bowser', 'assets/Bowser.png')
   game.load.spritesheet('tree', 'assets/tree.png')
@@ -13,6 +13,7 @@ function preload () {
   game.load.spritesheet('armorbar', 'assets/pink.jpg')
   game.load.spritesheet('radial', 'assets/radial.png')
   game.load.spritesheet('fire', 'assets/fire.png')
+  game.load.spritesheet('fireball', 'assets/fireball.png')
   game.load.spritesheet('wotorball', 'assets/waterball_big.png')
   game.load.spritesheet('fireskull', 'assets/fireskull.png')
   game.load.spritesheet('greenarea', 'assets/greenarea.png')
@@ -64,12 +65,16 @@ var spearCheck = false
 var spearxvel
 var spearyvel
 var speardata = []
+var splitFireCheck = false
 var skullCircle0
 var skullCircle1
 var skullCircles = 0
 var waterSpearCheck
+var inSkullCircle = false
+var skullfire = []
+var skullfireAngle = 0
 
-var armor = 64
+var armor = 1
 
 
 function create () {
@@ -98,6 +103,14 @@ function create () {
 
   cursors = game.input.keyboard.createCursorKeys()
   setEventHandlers()
+
+  for (i = 0; i < 4; i++) {
+    skullfire[i] = game.add.weapon(500, 'fireball')
+    skullfire[i].bulletKillType = Phaser.Weapon.KILL_WORD_BOUNDS;
+    skullfire[i].bulletSpeed = 150;
+    skullfire[i].fireRate = 800;
+  }
+  skullfire[3].onFire.add(skullfireAngleSet)
 
   waterfire = game.add.weapon(50, 'waterball');
   waterfire.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
@@ -260,15 +273,24 @@ function splitFire1 () {
   setInterval(skullCirclefunc, 2000)
 }
 
+function inSkullCirclefunc () {
+  inSkullCircle = true
+}
+
 function skullCirclefunc () {
   if (playernum === 2) {
     if (skullCircles > 0) {
+      game.physics.arcade.overlap(skullCircle0, player, inSkullCirclefunc, null, this);
+      if (inSkullCircle === false) {
+        ripHealth()
+      }
+      inSkullCircle = false
       skullCircle0.destroy()
     }
     skullCircles += 1
     var randomx = -200
     var randomy = -500
-    while (randomx > -250 && randomx < -150 && randomy > -550 && randomy < -450) {
+    while (randomx > -230 && randomx < -170 && randomy > -530 && randomy < -470) {
       randomx = Math.random() * 400 - 400
       randomy = Math.random() * 400 - 700
     }
@@ -276,6 +298,7 @@ function skullCirclefunc () {
     skullCircle0.scale.setTo(.05)
     skullCircle0.alpha = .5
     skullCircle0.anchor.setTo(.5, .5)
+    game.physics.enable(skullCircle0, Phaser.Physics.ARCADE);
   }
 }
 
@@ -396,6 +419,14 @@ function hitBoss (boss, bullet) {
   bullet.kill()
 }
 
+function ripbullet (splitFire, bullet) {
+  bullet.kill()
+}
+
+function ripskullfire (splitFire, bullet) {
+  bullet.kill()
+}
+
 function updateArmor (newArmor) {
   armor = newArmor
   armorbar.scale.setTo(.1 * armor / 16, .01)
@@ -421,6 +452,13 @@ function waterSpear () {
   waterSpearCheck = true
 }
 
+function skullfireAngleSet () {
+  skullfireAngle += 15
+  if (skullfireAngle === 90) {
+    skullfireAngle = 0
+  }
+}
+
 function update () {
   for (var i = 0; i < enemies.length; i++) {
     if (enemies[i].alive) {
@@ -440,6 +478,20 @@ function update () {
   }
 
   if (gameStart === true) {
+    if (splitFireCheck === true) {
+      for (var i = 0; i < 15; i++) {
+        game.physics.arcade.overlap(waterfire.bullets, splitFire[i], ripbullet, null, this);
+      }
+      for (var i = 0; i < 4; i++) {
+        skullfire[i].fireAngle = i*90 - 90 + skullfireAngle
+        if (playernum === 2) {
+          skullfire[i].fire(fireskull[0])
+        } else if (playernum === 1) {
+          skullfire[i].fire(fireskull[1])
+        }
+        game.physics.arcade.overlap(skullfire[i].bullets, player, ripHealth, null, this);
+      }
+    }
     game.physics.arcade.overlap(waterfire.bullets, bowser, hitBoss, null, this);
     if (waterWallCheck1 === true) {
       for (var i = 0; i < 20; i++) {
