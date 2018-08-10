@@ -16,7 +16,7 @@ var playernum = 0
 var treeLoc = 0
 
 var isTree = true
-var armor = 16
+var armor = 1
 
 // Create and start the http server
 var server = http.createServer(
@@ -49,7 +49,7 @@ function onSocketConnection (client) {
   client.on('move player', onMovePlayer)
   if (playernum === 2) {
     socket.emit('spawn boss')
-    setTimeout(splitFire, 5000)
+    setTimeout(Phase1MainLoop, 20000)
   }
   client.on('waterfire', waterfire)
   client.on('hitBoss', hitBoss)
@@ -60,17 +60,14 @@ function onSocketConnection (client) {
 }
 
 function Phase1MainLoop () {
-  setTimeout(spawnTree, 5000)
-  setTimeout(spawnTree, 10000)
-  setTimeout(spawnTree, 15000)
-  setTimeout(spawnTree, 20000)
-  setTimeout(spawnTree, 25000)
-  setTimeout(spawnTree, 30000)
-  setTimeout(forwardFirewall, 8000)
-  setTimeout(forwardFirewall, 16000)
-  setTimeout(forwardFirewall, 24000)
-  setTimeout(splitFireWarning, 30000)
-  setTimeout(splitFire, 31000)
+  for (var i = 0; i < 9; i++) {
+    setTimeout(spawnTree, i*7000 + 2000)
+  }
+  for (var i = 1; i < 9; i++) {
+    setTimeout(forwardFirewall, i*8000)
+  }
+  setTimeout(splitFireWarning, 70000)
+  setTimeout(splitFire, 73000)
 }
 
 function spawnTree () {
