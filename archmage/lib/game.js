@@ -13,10 +13,35 @@ var players	// Array of connected players
 
 var playernum = 0
 
-var treeLoc = 0
-
-var isTree = true
 var armor = 1
+var rip3Check = false
+
+var retrynum = 0
+
+var timeoutmanager={
+    timeouts : [],//global timeout id arrays
+    setTimeout : function(code,number){
+        this.timeouts.push(setTimeout(code,number));
+    },
+    clearAllTimeout :function(){
+        for (var i=0; i<this.timeouts.length; i++) {
+            clearTimeout(this.timeouts[i]); // clear all the timeouts
+        }
+        this.timeouts= [];//empty the id array
+    }
+};
+var intervalmanager={
+    intervals : [],//global timeout id arrays
+    setInterval : function(code,number){
+        this.intervals.push(setInterval(code,number));
+    },
+    clearAllInterval :function(){
+        for (var i=0; i<this.intervals.length; i++) {
+            clearInterval(this.intervals[i]); // clear all the timeouts
+        }
+        this.intervals= [];//empty the id array
+    }
+};
 
 // Create and start the http server
 var server = http.createServer(
@@ -43,13 +68,17 @@ var setEventHandlers = function () {
 function onSocketConnection (client) {
   util.log('New player has connected: ' + client.id)
   playernum += 1
-  client.emit('playnum', playernum)
+  if (playernum > 2.1) {
+    playernum = 2
+  } else {
+    client.emit('playnum', playernum)
+  }
   client.on('disconnect', onClientDisconnect)
   client.on('new player', onNewPlayer)
   client.on('move player', onMovePlayer)
   if (playernum === 2) {
     socket.emit('spawn boss')
-    setTimeout(Phase1MainLoop, 20000)
+    timeoutmanager.setTimeout(Phase1MainLoop, 20000)
   }
   client.on('waterfire', waterfire)
   client.on('hitBoss', hitBoss)
@@ -57,38 +86,68 @@ function onSocketConnection (client) {
   client.on('waterWallOff', waterWallOff)
   client.on('spearOn', spearOn)
   client.on('fountainOn', fountainOn)
+  client.on('rip3', rip3)
+  client.on('gameOver', gameOver)
+  client.on('retry', retry)
+  client.on('new game', newGame)
+}
+
+function newGame () {
+  console.log('new Game')
+  socket.emit('spawn boss')
+  timeoutmanager.setTimeout(Phase1MainLoop, 20000)
+}
+
+function gameOver () {
+  timeoutmanager.clearAllTimeout()
+  intervalmanager.clearAllInterval()
+  socket.emit('ripGame')
 }
 
 function Phase1MainLoop () {
   for (var i = 0; i < 9; i++) {
-    setTimeout(spawnTree, i*7000 + 2000)
+    timeoutmanager.setTimeout(spawnTree, i*7000 + 2000)
+
   }
   for (var i = 1; i < 9; i++) {
-    setTimeout(forwardFirewall, i*8000)
+    timeoutmanager.setTimeout(forwardFirewall, i*8000)
+    timeoutmanager.setTimeout(timebomb, i*8000 - 4000)
   }
-  setTimeout(splitFireWarning, 70000)
-  setTimeout(splitFire, 73000)
+  for (var i = 0; i < 9; i++) {
+    timeoutmanager.setTimeout(laser, i*7000 - 1500)
+  }
+  timeoutmanager.setTimeout(splitFireWarning, 70000)
+  timeoutmanager.setTimeout(splitFire, 73000)
 }
 
 function spawnTree () {
-  treeLoc = Math.random() * -800
+  var treeLoc = Math.random() * -800
   socket.emit('tree', treeLoc)
-  setTimeout(function(){ tree2(treeLoc); }, 4000)
+  timeoutmanager.setTimeout(function(){ tree2(treeLoc); }, 4000)
 }
 
 function tree2 (treeLoc) {
   socket.emit('tree2', treeLoc)
-  setTimeout(function(){ tree3(); }, 1000)
+  timeoutmanager.setTimeout(function(){ tree3(); }, 1500)
 }
 
 function tree3 () {
   socket.emit('tree3')
 }
 
+function timebomb () {
+  socket.emit('timebomb')
+  timeoutmanager.setTimeout(timebomb2, 2000)
+}
+
+function timebomb2 () {
+  socket.emit('timebomb2')
+}
+
 function forwardFirewall () {
   socket.emit('forwardFirewall')
-  setTimeout(forwardFirewall2, 1000)
-  setTimeout(forwardFirewall3, 3000)
+  timeoutmanager.setTimeout(forwardFirewall2, 1000)
+  timeoutmanager.setTimeout(forwardFirewall3, 3000)
 }
 
 function forwardFirewall2 () {
@@ -98,6 +157,27 @@ function forwardFirewall2 () {
 function forwardFirewall3 () {
   socket.emit('forwardFirewall3')
 }
+
+function laser () {
+  socket.emit('laser0')
+  timeoutmanager.setTimeout(laser1, 1000)
+  //timeoutmanager.setTimeout(laser2, 400)
+  timeoutmanager.setTimeout(laser3, 3000)
+}
+
+function laser1 () {
+  var randplayer = Math.ceil(Math.random() * 2)
+  socket.emit('laser', randplayer)
+}
+
+function laser2 () {
+  //socket.emit('laser2')
+}
+
+function laser3 () {
+  socket.emit('laser3')
+}
+
 /*
 function splitFireOffset () {
   setTimeout(splitFireOffset2, 2000)
@@ -131,16 +211,21 @@ function waterWallOff () {
 
 function fountainOn (fountaindata) {
   socket.emit('fountainOn', fountaindata)
-  setTimeout(fountainOff, 3000)
+  timeoutmanager.setTimeout(fountainOff, 2000)
+  timeoutmanager.setTimeout(fountainOff2, 7000)
 }
 
 function fountainOff () {
   socket.emit('fountainOff')
 }
 
+function fountainOff2 () {
+  socket.emit('fountainOff2')
+}
+
 function spearOn (speardata) {
   socket.emit('spearOn', speardata)
-  setTimeout(spearOff, 2000)
+  timeoutmanager.setTimeout(spearOff, 2000)
 }
 
 function spearOff () {
@@ -174,6 +259,24 @@ function onNewPlayer (data) {
 
 function waterfire (data) {
   socket.emit('otherWaterfire', {x: data.x, y: data.y})
+}
+
+function rip3 () {
+  if (rip3Check === false) {
+    var randomg = Math.random() * 400 - 600
+    socket.emit('rip3', randomg)
+    rip3Check = true
+  }
+}
+
+function retry () {
+  armor = 1
+  rip3Check = false
+  retrynum += 1
+  if (retrynum > 1.5) {
+    retrynum = 0
+    socket.emit('retryready')
+  }
 }
 
 function onMovePlayer (data) {

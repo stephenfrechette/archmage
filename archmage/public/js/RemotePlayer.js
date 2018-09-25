@@ -7,7 +7,6 @@ var RemotePlayer = function (index, game, player, startX, startY, startAngle, pl
 
   this.game = game
   this.health = 3
-  otherPlayer = player
   this.alive = true
   if (playnum === 1) {
     this.player = game.add.sprite(x, y, 'enemy')
@@ -15,6 +14,7 @@ var RemotePlayer = function (index, game, player, startX, startY, startAngle, pl
   if (playnum === 2) {
     this.player = game.add.sprite(x, y, 'bluesquare')
   }
+  console.log(playnum)
   this.player.animations.add('move', [0, 1, 2, 3, 4, 5, 6, 7], 20, true)
   this.player.animations.add('stop', [3], 20, true)
 
