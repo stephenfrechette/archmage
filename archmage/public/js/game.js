@@ -1,4 +1,11 @@
 game = new Phaser.Game(800, 600, Phaser.AUTO, '')
+
+var Title = {
+  preload: preload,
+  create: createTitle,
+  update: updateTitle,
+  render: render,
+};
 var game1 = {
   preload: preload,
   create: create,
@@ -11,9 +18,69 @@ var Over = {
   update: update0,
   render: render,
 };
+game.state.add('Title', Title, false)
 game.state.add('game1', game1, false)
 game.state.add('Over', Over, false)
-game.state.start('game1')
+game.state.start('Title')
+
+var deltaTime
+var elapsedMS
+var fps
+
+var socket // Socket connection
+
+var land
+
+var playernum = 0
+
+var player
+var enemies = []
+var playerstuff
+
+var otherPlayer = []
+
+var gmovr
+
+var retryCheck = false
+
+var setEventHandlers = function () {
+  socket.on('connect', onSocketConnected)
+  socket.on('disconnect', onSocketDisconnect)
+  socket.on('joinedroom', joinedroom)
+  socket.on('new player', onNewPlayer)
+  socket.on('move player', onMovePlayer)
+  socket.on('remove player', onRemovePlayer)
+  socket.on('otherWaterfire', otherWaterfire)
+  socket.on('spawnboss', bossSpawn1)
+  socket.on('tree2', tree2)
+  socket.on('tree3', tree3)
+  socket.on('updateArmor', updateArmor)
+  socket.on('forwardFirewall', forwardFirewall)
+  socket.on('forwardFirewall2', forwardFirewall2)
+  socket.on('forwardFirewall3', forwardFirewall3)
+  socket.on('waterWallOn2', waterWallOn2)
+  socket.on('waterWallOff2', waterWallOff2)
+  socket.on('splitFire', splitFire1)
+  socket.on('splitFireWarning', splitFireWarning)
+  socket.on('spearOn', spearOn)
+  socket.on('spearOff', spearRemove)
+  socket.on('fountainOn', fountainOn)
+  socket.on('fountainOff', fountainCool)
+  socket.on('fountainOff2', fountainCool2)
+  socket.on('rip3', ripFireskull4)
+  socket.on('ripGame', gameOver)
+  socket.on('laser0', laser0)
+  socket.on('laser', laser1)
+  socket.on('laser2', laser2)
+  socket.on('laser3', laser3)
+  socket.on('timebomb', timebomb1)
+  socket.on('timebomb2', timebomb2)
+  socket.on('retryready', retryready)
+  socket.on('bossTP', bossTP)
+}
+
+var socket = io.connect()
+setEventHandlers()
 
 function preload () {
   game.stage.disableVisibilityChange = true;
@@ -42,137 +109,22 @@ function preload () {
   game.load.spritesheet('bluesquare', 'assets/blue.png', 32, 32)
   game.load.spritesheet('cyansquare', 'assets/cyan.jpg', 32, 32)
   game.load.spritesheet('singleskullbar', 'assets/yellow.jpg', 40, 8)
+  game.load.spritesheet('permaspear', 'assets/yellow.jpg', 20, 20)
+  game.load.spritesheet('materialspear', 'assets/orange.jpg', 20, 20)
   game.load.spritesheet('yellowdamagebar', 'assets/yellow.jpg', 10, 10)
   game.load.spritesheet('greendamagebar', 'assets/green.png', 30, 90)
+  game.load.spritesheet('treeconfirm', 'assets/green.png', 16, 16)
   game.load.spritesheet('pinkdamagebar', 'assets/pink.jpg', 15, 100)
   game.load.spritesheet('laserWarning', 'assets/red.jpg', 3, 1600)
   game.load.spritesheet('reallaser', 'assets/orange.jpg', 25, 1600)
   game.load.spritesheet('redTell', 'assets/red.jpg', 770, 770)
+  game.load.spritesheet('redTell2', 'assets/red.jpg', 50, 50)
+  game.load.spritesheet('redsquare', 'assets/red.jpg', 40, 40)
   game.load.spritesheet('orangecircle', 'assets/orangecircle.png')
   game.load.audio('oof', ['assets/roblox-death-sound_1.mp3', 'roblox-death-sound_1.ogg'])
-  game.load.audio('boss1a', ['assets/boss1a.mp3', 'assets/boss1a.ogg'])
-  game.load.audio('boss1b', ['assets/boss1b.mp3', 'assets/boss1b.ogg'])
+  //game.load.audio('boss1a', ['assets/boss1a.mp3', 'assets/boss1a.ogg'])
+  //game.load.audio('boss1b', ['assets/boss1b.mp3', 'assets/boss1b.ogg'])
 }
-
-var pokemon = true
-
-
-var deltaTime
-var elapsedMS
-var fps
-
-var socket // Socket connection
-
-var land
-
-var player
-var enemies
-var playerstuff
-
-var radial
-var radialOn = false
-var radialx
-var radialy
-var radialAngle
-var weaponE
-
-var health = 3
-var invulnerable = false
-
-var currentSpeed = 0
-var cursors
-
-var playernum = 0
-
-var boss1music = []
-
-var inPlay = true
-var gameStart = false
-
-var waterfire
-
-var repeatCheck = false
-
-var treeWarning
-var tree
-var isTree = false
-var forwardFire = []
-var forwardFirewallCheck = false
-var splitFire = []
-var fireskull = []
-var waterWall = []
-var waterWallCheck1 = false
-var waterWallCheck2 = false
-var greenareaCheck = false
-var redareaCheck = false
-var greenarea
-var fountainCheck = false
-var fountaindata = []
-var spear
-var spearCheck = false
-var spearxvel
-var spearyvel
-var speardata = []
-var splitFireCheck = false
-var skullCircle0
-var skullCircle1
-var skullCircles = false
-var skullrepeat
-var skullrepeat2
-var waterSpearCheck
-var inSkullCircle = false
-var skullfire = []
-var skullfireAngle = 0
-var skullfireBody
-var fireskullRipCheck = false
-var whichSkull = 0
-var swipe
-var swipeCheck = false
-var swipeCheck2 = false
-var materialGained = false
-var craftWarning
-var craftCheck = false
-var prevCraftCheck = false
-var armor = 1
-var craftMod = 1
-var invulnframesCheck
-var oof
-var letter
-var theLetter
-var craftKey
-var material = 1
-var waterCheck = false
-var singleSkullCheck = false
-var splitFire2 = []
-var singleskullbar
-var singleskullComboCheck = false
-var singleskullComboCheck2 = 0
-var updateSingleskullBar
-var updateskullbarnum = 1
-var skulldir = 'down'
-var mainPhase = false
-var damageTime = false
-var yellowdamagebar
-var greendamagebar
-var pinkdamagebar
-var damagebarCheck
-var realityPower = 0
-var realityCheck = false
-var laser = []
-var laserCheck = [false, false, false, false, false]
-var laserCheck2 = false
-var laserline = []
-var lasernum = 0
-var laserTell
-var timebomb = []
-var timebombCheck = false
-var timebombTime = 0
-
-var otherPlayer = []
-
-var gmovr
-
-var retryCheck = false
 
 var timeoutmanager={
     timeouts : [],//global timeout id arrays
@@ -199,89 +151,182 @@ var intervalmanager={
     }
 };
 
+function createTitle () {
+  game.world.setBounds(-800, -800, 600, 600)
+  game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
+  window.character1
+  window.character2
+  window.charselectCheck = false
+  window.roomnumber = 0
+  character1 = game.add.sprite(-500, -500, "bluesquare")
+  character2 = game.add.sprite(-300, -500, "meeple")
+  console.log('yas')
+  character1.anchor.setTo(.5, .5)
+  character2.anchor.setTo(.5, .5)
+}
+
+function updateTitle () {
+  if (game.input.activePointer.leftButton.isDown && charselectCheck === false) {
+    if (Math.abs(game.input.activePointer.worldX + 500) < 20 && Math.abs(game.input.activePointer.worldY + 500) < 20) {
+      playernum = 1
+      roomSelect()
+    }
+    if (Math.abs(game.input.activePointer.worldX + 300) < 20 && Math.abs(game.input.activePointer.worldY + 500) < 20) {
+      playernum = 2
+      roomSelect()
+    }
+  }
+  if (charselectCheck === true && game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
+    roomnumber = 1
+    socket.emit('roomSelect', {roomnumber, playernum})
+  }
+}
+
+function roomSelect () {
+  charselectCheck = true
+  character1.destroy()
+  character2.destroy()
+}
+
+function joinedroom () {
+  game.state.start('game1', true, false)
+}
+
+function restartgame () {
+  timeoutmanager.clearAllTimeout()
+  intervalmanager.clearAllInterval()
+  //boss1music[0].destroy()
+  //boss1music[1].destroy()
+  oof.destroy()
+  inPlay = false
+  game.state.start('Title', true, false)
+  retryCheck = false
+}
+
 function create () {
-  health = 3
-  invulnerable = false
+  window.pokemon = true
 
-  currentSpeed = 0
+  window.radial
+  window.radialOn = false
+  window.radialx
+  window.radialy
+  window.radialAngle
+  window.weaponE
 
-  boss1music = []
+  window.health = 3
+  window.invulnerable = false
 
-  inPlay = true
-  gameStart = false
+  window.currentSpeed = 0
+  window.cursors
 
-  repeatCheck = false
+  window.boss1music = []
 
-  isTree = false
-  forwardFire = []
-  forwardFirewallCheck = false
-  splitFire = []
-  fireskull = []
-  waterWall = []
-  waterWallCheck1 = false
-  waterWallCheck2 = false
-  greenareaCheck = false
-  redareaCheck = false
-  fountainCheck = false
-  fountaindata = []
-  spearCheck = false
-  speardata = []
-  splitFireCheck = false
-  skullCircles = false
-  inSkullCircle = false
-  skullfire = []
-  skullfireAngle = 0
-  fireskullRipCheck = false
-  whichSkull = 0
-  swipeCheck = false
-  swipeCheck2 = false
-  materialGained = false
-  craftCheck = false
-  prevCraftCheck = false
-  armor = 1
-  craftMod = 1
-  material = 1
-  waterCheck = false
-  singleSkullCheck = false
-  singleskullComboCheck = false
-  singleskullComboCheck2 = 0
-  updateskullbarnum = 1
-  skulldir = 'down'
-  mainPhase = false
-  damageTime = false
-  realityPower = 0
-  realityCheck = false
-  laser = []
-  laserCheck = [false, false, false, false, false]
-  laserCheck2 = false
-  laserline = []
-  lasernum = 0
-  timebomb = []
-  timebombCheck = false
-  timebombTime = 0
+  window.inPlay = false
+  window.gameStart = false
+
+  window.waterfire
+
+  window.repeatCheck = false
+
+  window.treeWarning
+  window.tree
+  window.isTree = false
+  window.forwardFire = []
+  window.forwardFirewallCheck = false
+  window.splitFire = []
+  window.fireskull = []
+  window.waterWall = []
+  window.waterWallCheck1 = false
+  window.waterWallCheck2 = false
+  window.greenareaCheck = false
+  window.redareaCheck = false
+  window.greenarea
+  window.fountainCheck = false
+  window.fountaindata = []
+  window.spear
+  window.spearCheck = false
+  window.spearxvel
+  window.spearyvel
+  window.speardata = []
+  window.splitFireCheck = false
+  window.skullCircle = []
+  window.skullCircles = false
+  window.skullrepeat
+  window.skullrepeat2
+  window.waterSpearCheck = false
+  window.inSkullCircle = false
+  window.skullfire = []
+  window.skullfireAngle = 0
+  window.skullfireBody
+  window.fireskullRipCheck = false
+  window.whichSkull = 0
+  window.swipe
+  window.swipeCheck = false
+  window.swipeCheck2 = false
+  window.materialGained = false
+  window.materialSpearCheck = false
+  window.craftWarningEventHandlers
+  window.craftCheck = false
+  window.prevCraftCheck = false
+  window.armor = 1
+  window.craftMod = 1
+  window.invulnframesCheck
+  window.oof
+  window.letter
+  window.theLetter
+  window.craftKey
+  window.material = 0
+  window.waterCheck = false
+  window.singleSkullCheck = false
+  window.splitFire2 = []
+  window.singleskullbar
+  window.singleskullComboCheck = false
+  window.singleskullComboCheck2 = 0
+  window.updateSingleskullBar
+  window.updateskullbarnum = 1
+  window.skulldir = 'down'
+  window.mainPhase = false
+  window.damageTime = false
+  window.yellowdamagebar
+  window.greendamagebar
+  window.pinkdamagebar
+  window.damagebarCheck
+  window.realityPower = 0
+  window.realityCheck = false
+  window.laser
+  window.laserCheck = false
+  window.laserCheck2 = false
+  window.laserCheck3 = false
+  window.laserline
+  window.lasernum = 0
+  window.laserTell
+  window.timebomb = []
+  window.timebombCheck = false
+  window.timebombTime = 0
+  window.skullCircleTime = 0
+  window.treeUI
+  window.waterUI
+  window.fireUI
+  window.craftcounter = 0
+  window.TPtell = []
+  window.TPCheck = false
+  window.TPTime = 0
+  window.blockCheck = false
+  window.blockCheck2 = false
+  window.materialCollectedCheck = false
+
+  window.moveCheck = true
 
   playerstuff = game.add.group()
   bossstuff = game.add.group()
 
-  boss1music[0] = game.add.audio('boss1a')
-  boss1music[1] = game.add.audio('boss1b')
+  //boss1music[0] = game.add.audio('boss1a')
+  //boss1music[1] = game.add.audio('boss1b')
   oof = game.add.audio('oof')
   enemies = []
 
   land = game.add.tileSprite(0, 0, 800, 600, 'earth')
   land.fixedToCamera = true
-
-  if (retryCheck === false) {
-    game.world.setBounds(-800, -800, 600, 600)
-    game.scale.scaleMode = Phaser.ScaleManager.SHOW_ALL
-    socket = io.connect()
-    setEventHandlers()
-  } else {
-    enemies.push(new RemotePlayer(otherPlayer[0], game, player, otherPlayer[1], otherPlayer[2], otherPlayer[3], playernum))
-    if (playernum === 1) {
-      socket.emit('new game')
-    }
-  }
 
   var startX = Math.round(Math.random() * (1000) - 500)
   var startY = Math.round(Math.random() * (1000) - 500)
@@ -296,6 +341,15 @@ function create () {
   player.body.setSize(24, 24, 4, 4)
 
   player.bringToTop()
+
+  if (retryCheck === true) {
+    enemies.push(new RemotePlayer(otherPlayer[0], game, player, otherPlayer[1], otherPlayer[2], otherPlayer[3], playernum))
+    if (playernum === 1) {
+      socket.emit('new game')
+    }
+  } else {
+    socket.emit('new player', { x: player.x, y: player.y, angle: player.angle })
+  }
 
   //game.camera.follow(player)
   //game.camera.deadzone = new Phaser.Rectangle(300, 300, 500, 300)
@@ -318,40 +372,6 @@ function create () {
   waterfire.fireRate = 100;
 }
 
-var setEventHandlers = function () {
-  socket.on('connect', onSocketConnected)
-  socket.on('disconnect', onSocketDisconnect)
-  socket.on('new player', onNewPlayer)
-  socket.on('move player', onMovePlayer)
-  socket.on('remove player', onRemovePlayer)
-  socket.on('otherWaterfire', otherWaterfire)
-  socket.on('spawn boss', bossSpawn1)
-  socket.on('tree2', tree2)
-  socket.on('tree3', tree3)
-  socket.on('updateArmor', updateArmor)
-  socket.on('forwardFirewall', forwardFirewall)
-  socket.on('forwardFirewall2', forwardFirewall2)
-  socket.on('forwardFirewall3', forwardFirewall3)
-  socket.on('waterWallOn2', waterWallOn2)
-  socket.on('waterWallOff2', waterWallOff2)
-  socket.on('splitFire', splitFire1)
-  socket.on('splitFireWarning', splitFireWarning)
-  socket.on('spearOn', spearOn)
-  socket.on('spearOff', spearRemove)
-  socket.on('fountainOn', fountainOn)
-  socket.on('fountainOff', fountainCool)
-  socket.on('fountainOff2', fountainCool2)
-  socket.on('rip3', ripFireskull4)
-  socket.on('ripGame', gameOver)
-  socket.on('laser0', laser0)
-  socket.on('laser', laser1)
-  socket.on('laser2', laser2)
-  socket.on('laser3', laser3)
-  socket.on('timebomb', timebomb1)
-  socket.on('timebomb2', timebomb2)
-  socket.on('retryready', retryready)
-}
-
 function gameOver () {
   game.state.start('Over', true, false)
 }
@@ -366,7 +386,7 @@ function ripHealth () {
   console.log('ripHealth')
   if (invulnerable === false) {
     health -= 1;
-    if (health > 3.1) {
+    if (health < 0.1) {
       socket.emit('gameOver')
     } else {
       oof.play()
@@ -374,7 +394,7 @@ function ripHealth () {
       invulnerable = true
       timeoutmanager.setTimeout(vulnerable, 1500)
       player.alpha = .2
-      invulnframesCheck = setInterval(invulnframes, 300)
+      invulnframesCheck = setInterval(invulnframes, 100)
     }
   }
 }
@@ -413,8 +433,8 @@ function print3() {
   }
   var randmus1 = Math.random() * 2
   var randmus = Math.floor(randmus1)
-  boss1music[randmus].play()
-  boss1music[randmus].volume = .2
+  //boss1music[randmus].play()
+  //boss1music[randmus].volume = .2
 }
 
 function bossSpawn1() {
@@ -422,6 +442,7 @@ function bossSpawn1() {
   timeoutmanager.setTimeout(print2, 11000)
   timeoutmanager.setTimeout(print1, 12000)
   timeoutmanager.setTimeout(bossSpawn2, 13000)
+  console.log('spawning boss')
   socket.on('tree', tree)
 }
 
@@ -433,14 +454,69 @@ function bossSpawn2() {
   bowser.scale.setTo(.1, .1)
   bowser.anchor.setTo(.5, 0)
   game.physics.arcade.enable(bowser, Phaser.Physics.ARCADE);
-  armorbar = game.add.sprite(-400, -800, 'armorbar')
-  armorbar.scale.setTo(.1, .01)
+  //armorbar = game.add.sprite(-400, -800, 'armorbar')
+  //armorbar.scale.setTo(.1, .01)
   gameStart = true
   mainPhase = true
+  if (playernum === 2) {
+      permaspear = game.add.sprite(player.x, player.y, 'permaspear')
+      permaspear.anchor.setTo(.5, .5)
+      game.physics.arcade.enable(permaspear, Phaser.Physics.ARCADE);
+  }
+}
+
+function blockReset () {
+  moveCheck = true
+  blockCheck = false
+  if (playernum === 1) {
+    player.loadTexture('bluesquare')
+  } else {
+    player.loadTexture('meeple')
+  }
+}
+
+function blockReset2 () {
+  blockCheck2 = false
+}
+
+function bossAngleGet(bossangle) {
+  var xdis = Math.sin(bossangle) * 200
+  var ydis = Math.cos(bossangle) * 200
+  if (playernum === 1) {
+    var newbossx = player.x + xdis
+    var newbossy = player.y + ydis
+  } else {
+    var newbossx = enemies[0].player.x + xdis
+    var newbossy = enemies[0].player.y + ydis
+  }
+  return [newbossx, newbossy]
+}
+
+function bossTP(bossangle) {
+  var newbosspos = bossAngleGet(bossangle)
+  TPtell[0] = game.add.sprite(newbosspos[0], newbosspos[1], 'orangecircle')
+  TPtell[0].anchor.setTo(.5,.5)
+  TPtell[0].alpha = .25
+  TPtell[0].scale.setTo(.25)
+  TPtell[1] = game.add.sprite(newbosspos[0], newbosspos[1], 'orangecircle')
+  TPtell[1].anchor.setTo(.5,.5)
+  TPtell[1].alpha = .5
+  TPtell[1].scale.setTo(.00001)
+  timeoutmanager.setTimeout(function(){ bossTP2(newbosspos); }, 1000)
+  TPCheck = true
+}
+
+function bossTP2(newbosspos) {
+  TPCheck = false
+  TPTime = 0
+  bowser.x = newbosspos[0]
+  bowser.y = newbosspos[1]
+  TPtell[0].destroy()
+  TPtell[1].destroy()
 }
 
 function tree(treeLoc) {
-  if (playernum === 1) {
+  if (playernum === 2) {
     treeWarning = game.add.sprite(treeLoc, -300, 'bowser');
     treeWarning.anchor.setTo(.5)
     treeWarning.scale.setTo(.05);
@@ -448,7 +524,7 @@ function tree(treeLoc) {
 }
 
 function tree2(treeLoc) {
-  if (playernum === 1) {
+  if (playernum === 2) {
     treeWarning.destroy()
   }
   tree = game.add.sprite(treeLoc, 0, 'tree')
@@ -483,48 +559,54 @@ function forwardFirewall3 () {
 }
 
 function laser0 () {
-  laserTell = bowser.addChild(game.make.sprite(0, 170, 'redTell'))
-  laserTell.anchor.setTo(.5, .5)
+  //laserTell = bowser.addChild(game.make.sprite(0, 170, 'redTell'))
+  //laserTell.anchor.setTo(.5, .5)
 }
 
 function laser1 (data) {
   if (playernum === data) {
-    laserline[lasernum] = new Phaser.Line(bowser.x, bowser.y, player.x, player.y)
+    laserline = new Phaser.Line(bowser.x, bowser.y, player.x, player.y)
     laserx = bowser.x - player.x
     lasery = bowser.y - player.y
     laserAngle = Math.atan(laserx / lasery)
   } else {
-    laserline[lasernum] = new Phaser.Line(bowser.x, bowser.y, enemies[0].player.x, enemies[0].player.y)
+    laserline = new Phaser.Line(bowser.x, bowser.y, enemies[0].player.x, enemies[0].player.y)
     laserx = bowser.x - enemies[0].player.x
     lasery = bowser.y - enemies[0].player.y
     laserAngle = Math.atan(laserx / lasery)
   }
-  laser[lasernum] = game.add.sprite(bowser.x, bowser.y, 'laserWarning')
-  laser[lasernum].anchor.setTo(.5, .5)
-  laser[lasernum].angle = 180 - (laserAngle * 180 / Math.PI)
-  var lasernum2 = lasernum
-  lasernum += 1
-  timeoutmanager.setTimeout(function(){ laser2(lasernum2); }, 400)
-  if (lasernum < 5) {
-    timeoutmanager.setTimeout(function(){ laser1(data); }, 200)
-  }
+  laser = game.add.sprite(bowser.x, bowser.y, 'laserWarning')
+  laser.anchor.setTo(.5, .5)
+  laser.angle = 180 - (laserAngle * 180 / Math.PI)
+  timeoutmanager.setTimeout(function(){ laser2(data); }, 700)
 }
 
-function laser2 (i) {
+function laser2 (data) {
   if (inPlay === true) {
-    laser[i].loadTexture('reallaser')
-    laserCheck[i] = true
+    laser.destroy()
+    if (playernum === data) {
+      laserline = new Phaser.Line(bowser.x, bowser.y, player.x, player.y)
+      laserx = bowser.x - player.x
+      lasery = bowser.y - player.y
+      laserAngle = Math.atan(laserx / lasery)
+    } else {
+      laserline = new Phaser.Line(bowser.x, bowser.y, enemies[0].player.x, enemies[0].player.y)
+      laserx = bowser.x - enemies[0].player.x
+      lasery = bowser.y - enemies[0].player.y
+      laserAngle = Math.atan(laserx / lasery)
+    }
+    laser = game.add.sprite(bowser.x, bowser.y, 'reallaser')
+    laser.anchor.setTo(.5, .5)
+    laser.angle = 180 - (laserAngle * 180 / Math.PI)
+    laserCheck = true
   }
 }
 
 function laser3 () {
-  for (var i = 0; i < 5; i++) {
-    laserCheck[i] = false
-    laser[i].destroy()
-    laserCheck2 = false
-  }
-  lasernum = 0
-  laserTell.destroy()
+  laserCheck = false
+  laser.destroy()
+  laserCheck2 = false
+  //laserTell.destroy()
 }
 
 function timebomb1 () {
@@ -532,6 +614,9 @@ function timebomb1 () {
   timebomb[1] = enemies[0].player.addChild(game.make.sprite(0, 0, 'orangecircle'))
   timebomb[2] = player.addChild(game.make.sprite(0, 0, 'orangecircle'))
   timebomb[3] = enemies[0].player.addChild(game.make.sprite(0, 0, 'orangecircle'))
+  for (var i = 0; i < 4; i++) {
+    game.physics.arcade.enable(timebomb[i], Phaser.Physics.ARCADE);
+  }
   for (var i = 0; i < 2; i++) {
     timebomb[i].scale.setTo(2)
     timebomb[i].alpha = .25
@@ -551,6 +636,10 @@ function timebomb2 () {
   }
   timebombCheck = false
   timebombTime = 0
+  game.physics.arcade.overlap(timebomb[1], player, ripHealth, null, this)
+  if (blockCheck === false) {
+    ripHealth()
+  }
 }
 
 function splitFireWarning () {
@@ -566,6 +655,9 @@ function splitFireWarning () {
 }
 
 function splitFire1 () {
+  if (playernum === 2) {
+      permaspear.destroy()
+  }
   inPlay = true
   mainPhase = false
   bowser.y = -1000
@@ -583,7 +675,7 @@ function splitFire1 () {
     fireskull[i].body.setSize(20, 20, 10, 10)
   }
   skullrepeat = setInterval(skullCirclefunc, 3500)
-  timeoutmanager.setTimeout(realityAct, 3500)
+  //timeoutmanager.setTimeout(realityAct, 3500)
 }
 
 function inSkullCirclefunc () {
@@ -592,12 +684,14 @@ function inSkullCirclefunc () {
 
 function skullCirclefunc () {
   if (skullCircles === true) {
-    game.physics.arcade.overlap(skullCircle0, player, inSkullCirclefunc, null, this);
+    game.physics.arcade.overlap(skullCircle[0], player, inSkullCirclefunc, null, this);
     if (inSkullCircle === false) {
       ripHealth()
     }
     inSkullCircle = false
-    skullCircle0.destroy()
+    skullCircle[0].destroy()
+    skullCircle[1].destroy()
+    skullCircleTime = 0
   }
   skullCircles = true
   if (playernum === 2) {
@@ -615,22 +709,28 @@ function skullCirclefunc () {
       randomy = Math.random() * 340 - 670
     }
   }
-  skullCircle0 = game.add.sprite(randomx, randomy, 'greenarea')
-  skullCircle0.scale.setTo(.1)
-  skullCircle0.alpha = .5
-  skullCircle0.anchor.setTo(.5, .5)
-  game.physics.arcade.enable(skullCircle0, Phaser.Physics.ARCADE);
+  skullCircle[0] = game.add.sprite(randomx, randomy, 'greenarea')
+  skullCircle[0].scale.setTo(.1)
+  skullCircle[0].alpha = .25
+  skullCircle[0].anchor.setTo(.5, .5)
+  game.physics.arcade.enable(skullCircle[0], Phaser.Physics.ARCADE);
+  skullCircle[1] = game.add.sprite(randomx, randomy, 'greenarea')
+  skullCircle[1].scale.setTo(.000001)
+  skullCircle[1].alpha = .5
+  skullCircle[1].anchor.setTo(.5, .5)
 }
 
 function skullCirclefunc2 () {
   if (playernum === 2) {
     if (skullCircles === true) {
-      game.physics.arcade.overlap(skullCircle0, player, inSkullCirclefunc, null, this);
+      game.physics.arcade.overlap(skullCircle[0], player, inSkullCirclefunc, null, this);
       if (inSkullCircle === false) {
         ripHealth()
       }
       inSkullCircle = false
-      skullCircle0.destroy()
+      skullCircle[0].destroy()
+      skullCircle[1].destroy()
+      skullCircleTime = 0
     }
     skullCircles = true
     var randomx = 0
@@ -640,11 +740,15 @@ function skullCirclefunc2 () {
       randomy = Math.random() * 400 - 700
     }
   }
-  skullCircle0 = game.add.sprite(randomx, randomy, 'greenarea')
-  skullCircle0.scale.setTo(.1)
-  skullCircle0.alpha = .5
-  skullCircle0.anchor.setTo(.5, .5)
-  game.physics.arcade.enable(skullCircle0, Phaser.Physics.ARCADE);
+  skullCircle[0] = game.add.sprite(randomx, randomy, 'greenarea')
+  skullCircle[0].scale.setTo(.1)
+  skullCircle[0].alpha = .25
+  skullCircle[0].anchor.setTo(.5, .5)
+  game.physics.arcade.enable(skullCircle[0], Phaser.Physics.ARCADE);
+  skullCircle[1] = game.add.sprite(randomx, randomy, 'greenarea')
+  skullCircle[1].scale.setTo(.000001)
+  skullCircle[1].alpha = .5
+  skullCircle[1].anchor.setTo(.5, .5)
 }
 
 function waterWallOn2 (waterWallPosx, waterWallPosy) {
@@ -717,7 +821,7 @@ function onSocketConnected () {
     enemy.player.kill()
   })
   enemies = []
-  socket.emit('new player', { x: player.x, y: player.y, angle: player.angle })
+  //socket.emit('new player', { x: player.x, y: player.y, angle: player.angle })
 }
 
 function playnum (data) {
@@ -766,6 +870,10 @@ function onRemovePlayer (data) {
   removePlayer.player.kill()
 
   enemies.splice(enemies.indexOf(removePlayer), 1)
+
+  timeoutmanager.clearAllTimeout()
+  intervalmanager.clearAllInterval()
+  game.state.start('Title')
 }
 
 function hitBoss (boss, bullet) {
@@ -773,6 +881,19 @@ function hitBoss (boss, bullet) {
     socket.emit('hitBoss')
   }
   bullet.kill()
+}
+
+function hitCraft (player, bullet) {
+  //waterUI.destroy()
+  //fireUI.destroy()
+  material += 1
+  console.log('material: ' + material)
+  bullet.kill()
+  if (material > 50) {
+    materialCollectedCheck = false
+    console.log('you did it!')
+    material = 0
+  }
 }
 
 function ripbullet (splitFire, bullet) {
@@ -785,8 +906,8 @@ function ripskullfire (splitFire, bullet) {
 
 function updateArmor (newArmor) {
   armor = newArmor
-  armorbar.scale.setTo(.1 * armor / 16, .01)
-  console.log('Armor: ' + armor)
+  //armorbar.scale.setTo(.1 * armor / 16, .01)
+  //console.log('Armor: ' + armor)
 }
 
 function waterWallCool () {
@@ -834,7 +955,9 @@ function ripFireskull () {
     for (var i = 0; i < 15; i++) {
       splitFire[i].destroy()
     }
-    skullCircle0.destroy()
+    skullCircle[0].destroy()
+    skullCircle[1].destroy()
+    skullCircleTime = 0
     clearInterval(skullrepeat)
     splitFireCheck = false
     skullCircles = false
@@ -922,7 +1045,9 @@ function ripFireskull4 (randomg) {
   for (var i = 0; i < 30; i++) {
     splitFire2[i].destroy()
   }
-  skullCircle0.destroy()
+  skullCircle[0].destroy()
+  skullCircle[1].destroy()
+  skullCircleTime = 0
   clearInterval(skullrepeat2)
   player.y = -300
   if (playernum === 1) {
@@ -968,6 +1093,44 @@ function endSwipe () {
 
 function endSwipe2 () {
   swipeCheck2 = false
+}
+
+function materialSpear () {
+  materialSpearCheck = 'tree'
+  permaspear.loadTexture('materialspear')
+}
+
+function permafire () {
+  materialSpearCheck = 'fire'
+  permaspear.loadTexture('materialspear')
+}
+
+function permawater () {
+    materialSpearCheck = 'water'
+    permaspear.loadTexture('materialspear')
+}
+
+function materialSpearReset () {
+  permaspear.loadTexture('permaspear')
+  craftcounter += 1
+  console.log('craftcounter: ' + craftcounter)
+  if (materialSpearCheck === 'tree' && treeUI === undefined) {
+    //treeUI = player.addChild(game.make.sprite(-16, -16, 'treeconfirm'))
+    //treeUI.anchor.setTo(.5, .5)
+    materialSpearCheck = false
+  } else if (materialSpearCheck === 'fire' && fireUI === undefined) {
+    fireUI = player.addChild(game.make.sprite(0, 16, 'treeconfirm'))
+    fireUI.anchor.setTo(.5, .5)
+  } else if (materialSpearCheck === 'water' && waterUI === undefined) {
+    waterUI = player.addChild(game.make.sprite(16, -16, 'treeconfirm'))
+    waterUI.anchor.setTo(.5, .5)
+  }
+  /*
+  if (treeUI !== undefined) {
+    materialSpearCheck = true
+  } else {
+    materialSpearCheck = false
+  } */
 }
 
 function materialGain () {
@@ -1074,7 +1237,10 @@ function changeredarea () {
 
 function update () {
   var prevdeltaTime = deltaTime
-  deltaTime = game.time.elapsed * 60 / 1000
+  deltaTime = game.time.elapsedMS * 60 / 1000
+  if (deltaTime < 1) {
+    deltaTime = 1
+  }
 
   if (deltaTime > 0) {
     for (var i = 0; i < 4; i++) {
@@ -1096,11 +1262,16 @@ function update () {
 
   if (invulnerable === false) {
     for (var i = 0; i < 5; i++) {
-      if (laserCheck[i] === true) {
+      if (laserCheck === true) {
         if (laserCheck2 === false) {
-          laserCheck2 = Phaser.Line.intersectsRectangle(laserline[i], player)
-          if (laserCheck2 === true && invulnerable === false) {
-            console.log('rip')
+          laserCheck2 = Phaser.Line.intersectsRectangle(laserline, player)
+          if (playernum === 2 && swipeCheck === true) {
+            laserCheck3 = Phaser.Line.intersectsRectangle(laserline, permaspear)
+            if (laserCheck3 === true && materialSpearCheck !== true) {
+              //permafire()
+            }
+          }
+          if (laserCheck2 === true && invulnerable === false && blockCheck === false) {
             ripHealth()
           }
         }
@@ -1166,19 +1337,21 @@ function update () {
         }
       }
     }
-    if (damagebarCheck === true) {
+    /*if (damagebarCheck === true) {
       pinkdamagebar.x += 10
       if (game.input.activePointer.leftButton.isDown) {
         damagebarCheck = false
       }
-    }
+    }*/
     if (swipeCheck === true) {
-      if (isTree === true) {
-        game.physics.arcade.overlap(swipe, tree, materialGain, null, this);
-      }
     }
     game.physics.arcade.overlap(waterfire.bullets, bowser, hitBoss, null, this);
     if (waterWallCheck1 === true) {
+      for (var j = 0; j < 3; j++) {
+        if (playernum === 2 && materialSpearCheck !== true && swipeCheck === true) {
+          //game.physics.arcade.overlap(waterWall[j], permaspear, permawater, null, this);
+        }
+      }
       for (var i = 0; i < 20; i++) {
         for (var j = 0; j < 3; j++) {
           game.physics.arcade.overlap(waterWall[j], forwardFire[i], function(){ fireWallDestroy(i); }, null, this);
@@ -1192,18 +1365,64 @@ function update () {
     }
   }
 
+  if (mainPhase === true) {
+    if (playernum === 2) {
+      var distance = game.physics.arcade.distanceToPointer(permaspear)
+      if (distance > 20) {
+        game.physics.arcade.moveToPointer(permaspear, 450 * deltaTime)
+      } else {
+        permaspear.body.velocity.setTo(0, 0)
+      }
+      //if (materialSpearCheck === true)  {
+        //craftcounter += 1
+        //treeUI.destroy()
+        //treeUI = undefined
+      //}
+      if (craftcounter > 4) {
+        materialCollectedCheck = true
+        craftcounter = 0
+      }
+      if (materialCollectedCheck === true) {
+        game.physics.arcade.overlap(waterfire.bullets, player, hitCraft, null, this);
+      }
+      if (isTree === true && swipeCheck === true && materialSpearCheck !== true) {
+        game.physics.arcade.overlap(permaspear, tree, materialSpear, null, this);
+      }
+      if (materialSpearCheck === 'tree') {
+        game.physics.arcade.overlap(permaspear, player, materialSpearReset, null, this);
+      }
+    }
+  }
+
   if (isTree === true) {
     tree.y -= 14 * deltaTime;
   }
 
   if (timebombCheck === true) {
-    timebombTime += game.time.elapsed
+    timebombTime += game.time.elapsedMS
     for (var i = 2; i < 4; i++) {
-      timebomb[i].scale.setTo(timebombTime / 1000)
+      timebomb[i].scale.setTo(timebombTime * 2 / 1300)
     }
   }
 
+  if (skullCircles === true) {
+    skullCircleTime += game.time.elapsedMS
+    skullCircle[1].scale.setTo(skullCircleTime * .1 / 3500)
+  }
+
+  if (TPCheck === true) {
+    TPTime += game.time.elapsedMS
+    TPtell[1].scale.setTo(TPTime * .25 / 1000)
+  }
+
   if (forwardFirewallCheck === true) {
+    if (playernum === 2) {
+      for (var i = 0; i < 20; i++) {
+        if (swipeCheck === true && materialSpearCheck !== true) {
+          //game.physics.arcade.overlap(permaspear, forwardFire[i], permafire, null, this);
+        }
+      }
+    }
     for (var i = 0; i < 20; i++) {
       forwardFire[i].y += 10 * deltaTime;
     }
@@ -1219,54 +1438,64 @@ function update () {
         game.physics.arcade.overlap(fireskull[1], greenarea, changeredarea, null, this);
       }
     }
+    if (moveCheck === true) {
+      if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) && blockCheck2 === false) {
+        moveCheck = false;
+        blockCheck = true;
+        blockCheck2 = true;
+        player.loadTexture('redsquare', 0)
+        timeoutmanager.setTimeout(blockReset, 400)
+        timeoutmanager.setTimeout(blockReset2, 1000)
+      }
 
-    if (game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-        player.x -= 4 * deltaTime
+      if (game.input.keyboard.isDown(Phaser.Keyboard.A)) {
+          player.x -= 4 * deltaTime
+          if (mainPhase === false) {
+            player.angle = 90
+          }
+      };
+
+      if (game.input.keyboard.isDown(Phaser.Keyboard.D)) {
+        player.x += 4 * deltaTime
         if (mainPhase === false) {
-          player.angle = 90
+          player.angle = -90
         }
-    };
+      };
 
-    if (game.input.keyboard.isDown(Phaser.Keyboard.D)) {
-      player.x += 4 * deltaTime
-      if (mainPhase === false) {
-        player.angle = -90
-      }
-    };
-
-    if (game.input.keyboard.isDown(Phaser.Keyboard.W)) {
-      player.y -= 4 * deltaTime
-      if (mainPhase === false) {
-        player.angle = 180
-      }
-    };
-
-    if (game.input.keyboard.isDown(Phaser.Keyboard.S)) {
-      player.y += 4 * deltaTime
-      if (mainPhase === false) {
-        player.angle = 0
-      }
-    };
-
-    if (game.input.keyboard.isDown(Phaser.Keyboard.E)) {
-      if (playernum === 1 && waterCheck === false) {
-        waterWallCheck1 = true
-        waterWallCheck2 = true
-        waterCheck = true
-        player.loadTexture('cyansquare', 0)
-        var waterWallx = []
-        var waterWally = []
-        for (var i = 0; i < 3; i++) {
-          waterWall[i] = game.add.sprite(player.x + 40*i - 40, player.y - 40, 'wotorball')
-          waterWall[i].scale.setTo(.15)
-          waterWall[i].anchor.setTo(.5, .5)
-          waterWallx[i] = waterWall[i].x
-          waterWally[i] = waterWall[i].y
-          game.physics.arcade.enable(waterWall[i], Phaser.Physics.ARCADE);
+      if (game.input.keyboard.isDown(Phaser.Keyboard.W)) {
+        player.y -= 4 * deltaTime
+        if (mainPhase === false) {
+          player.angle = 180
         }
-        socket.emit('waterWallOn', waterWallx, waterWally)
-        timeoutmanager.setTimeout(waterWallOff, 1000)
-        timeoutmanager.setTimeout(waterWallCool, 6000)
+      };
+
+      if (game.input.keyboard.isDown(Phaser.Keyboard.S)) {
+        player.y += 4 * deltaTime
+        if (mainPhase === false) {
+          player.angle = 0
+        }
+      };
+
+      if (game.input.keyboard.isDown(Phaser.Keyboard.E)) {
+        if (playernum === 1 && waterCheck === false) {
+          waterWallCheck1 = true
+          waterWallCheck2 = true
+          waterCheck = true
+          player.loadTexture('cyansquare', 0)
+          var waterWallx = []
+          var waterWally = []
+          for (var i = 0; i < 3; i++) {
+            waterWall[i] = game.add.sprite(player.x + 40*i - 40, player.y - 40, 'wotorball')
+            waterWall[i].scale.setTo(.15)
+            waterWall[i].anchor.setTo(.5, .5)
+            waterWallx[i] = waterWall[i].x
+            waterWally[i] = waterWall[i].y
+            game.physics.arcade.enable(waterWall[i], Phaser.Physics.ARCADE);
+          }
+          socket.emit('waterWallOn', waterWallx, waterWally)
+          timeoutmanager.setTimeout(waterWallOff, 1000)
+          timeoutmanager.setTimeout(waterWallCool, 6000)
+        }
       }
     }
 
@@ -1329,7 +1558,7 @@ function update () {
     }*/
 
     if (game.input.activePointer.rightButton.isDown) {
-      if (playernum === 2 && spearCheck === false && realityPower > 9.5) {
+      if (playernum === 2 && spearCheck === false/* && realityPower > 9.5*/) {
         spear = game.add.sprite(player.x, player.y, 'bowser')
         spear.scale.setTo(.025)
         spear.anchor.setTo(.5, .5)
@@ -1347,7 +1576,7 @@ function update () {
         speardata[3] = spearyvel
         socket.emit('spearOn', speardata)
       }
-      if (playernum === 1 && waterCheck === false && realityPower > 9.5) {
+      if (playernum === 1 && waterCheck === false/* && realityPower > 9.5*/) {
         if (greenareaCheck === false) {
           greenarea = game.add.sprite(game.input.activePointer.worldX, game.input.activePointer.worldY, 'greenarea')
           greenarea.scale.setTo(.1)
@@ -1367,8 +1596,8 @@ function update () {
       fountain.scale.setTo(.15)
       game.physics.arcade.enable(fountain, Phaser.Physics.ARCADE);
       greenarea.destroy()
-      realityPower = 0
-      realityAct()
+      //realityPower = 0
+      //realityAct()
       fountainCheck = true
       waterCheck = true
       player.loadTexture('cyansquare', 0)
@@ -1394,8 +1623,7 @@ function update () {
   } else {
     if (currentSpeed > 0) {
       currentSpeed -= 4
-  }
-
+    }
   }
 
   game.physics.arcade.velocityFromRotation(player.rotation, currentSpeed, player.body.velocity)
@@ -1429,9 +1657,9 @@ function playerById (id) {
 function create0 () {
   timeoutmanager.clearAllTimeout()
   intervalmanager.clearAllInterval()
-  boss1music[0].destroy()
-  boss1music[1].destroy()
-  oof.destroy()
+  //boss1music[0].destroy()
+  //boss1music[1].destroy()
+  //oof.destroy()
   inPlay = false
   gmovr = game.add.sprite(-400, -500, 'gameOver')
   gmovr.anchor.setTo(.5, .5)
