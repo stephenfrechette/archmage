@@ -87,7 +87,6 @@ function init () {
 
 var setEventHandlers = function () {
   socket.sockets.on('connection', onSocketConnection)
-
 }
 
 function onSocketConnection (client) {
@@ -116,7 +115,7 @@ function roomSelect (data) {
     if (rooms[data.roomnumber][1] !== undefined && rooms[data.roomnumber][2] !== undefined) {
       clients[rooms[data.roomnumber][1]].emit('spawnboss')
       clients[rooms[data.roomnumber][2]].emit('spawnboss')
-      timeoutmanagers[data.roomnumber].setTimeout(function(){ Phase1MainLoop(data.roomnumber); }, 20000)
+      timeoutmanagers[data.roomnumber].setTimeout(function(){ Phase1MainLoop(data.roomnumber); }, 15000)
     }
     clients[this.id].emit('joinedroom')
   } else {
@@ -129,7 +128,7 @@ function newGame () {
   roomnumber = clients[this.id].room
   clients[rooms[clients[this.id].room][1]].emit('spawnboss')
   clients[rooms[clients[this.id].room][2]].emit('spawnboss')
-  timeoutmanagers[roomnumber].setTimeout(function(){ Phase1MainLoop(roomnumber); }, 20000)
+  timeoutmanagers[roomnumber].setTimeout(function(){ Phase1MainLoop(roomnumber); }, 15000)
 }
 
 function gameOver () {
@@ -141,19 +140,18 @@ function gameOver () {
 }
 
 function Phase1MainLoop (roomnumber) {
-  for (var i = 0; i < 34; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ spawnTree(roomnumber); }, i*4000 - 1000)
-
-  }
   for (var i = 0; i < 70; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ bossTP(roomnumber); }, i*2000 - 400)
+    timeoutmanagers[roomnumber].setTimeout(function(){ spawnTree(roomnumber); }, i*2000 + 600)
   }
-  for (var i = 1; i < 18; i++) {
+  for (var i = 1; i < 70; i++) {
+    timeoutmanagers[roomnumber].setTimeout(function(){ bossTP(roomnumber); }, i*2000 - 1400)
+  }
+  for (var i = 10; i < 18; i++) {
     timeoutmanagers[roomnumber].setTimeout(function(){ forwardFirewall(roomnumber); }, i*8000)
     timeoutmanagers[roomnumber].setTimeout(function(){ timebomb(roomnumber); }, i*8000 - 4000)
   }
   for (var i = 0; i < 35; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ laser(roomnumber); }, i*4000 + 2000)
+    timeoutmanagers[roomnumber].setTimeout(function(){ laser(roomnumber); }, i*4000 + 2500)
   }
   timeoutmanagers[roomnumber].setTimeout(function(){ splitFireWarning(roomnumber); }, 140000)
   timeoutmanagers[roomnumber].setTimeout(function(){ splitFire(roomnumber); }, 143000)
@@ -163,7 +161,7 @@ function spawnTree (roomnumber) {
   var treeLoc = Math.random() * -800
   clients[rooms[roomnumber][1]].emit('tree', treeLoc)
   clients[rooms[roomnumber][2]].emit('tree', treeLoc)
-  timeoutmanagers[roomnumber].setTimeout(function(){ tree2(roomnumber, treeLoc); }, 2000)
+  timeoutmanagers[roomnumber].setTimeout(function(){ tree2(roomnumber, treeLoc); }, 1900)
 }
 
 function bossTP (roomnumber) {
@@ -175,7 +173,7 @@ function bossTP (roomnumber) {
 function tree2 (roomnumber, treeLoc) {
   clients[rooms[roomnumber][1]].emit('tree2', treeLoc)
   clients[rooms[roomnumber][2]].emit('tree2', treeLoc)
-  timeoutmanagers[roomnumber].setTimeout(function(){ tree3(roomnumber); }, 1500)
+  timeoutmanagers[roomnumber].setTimeout(function(){ tree3(roomnumber); }, 1900)
 }
 
 function tree3 (roomnumber) {
@@ -261,43 +259,64 @@ function hitBoss () {
 }
 
 function waterWallOn (waterWallx, waterWally) {
-  clients[rooms[clients[this.id].room][1]].emit('waterWallOn2', waterWallx, waterWally)
-  clients[rooms[clients[this.id].room][2]].emit('waterWallOn2', waterWallx, waterWally)
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[clients[this.id].room][i]].emit('waterWallOn2', waterWallx, waterWally)
+    }
+  }
 }
 
 function waterWallOff () {
-  clients[rooms[clients[this.id].room][1]].emit('waterWallOff2')
-  clients[rooms[clients[this.id].room][2]].emit('waterWallOff2')
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[clients[this.id].room][i]].emit('waterWallOff2')
+    }
+  }
 }
 
 function fountainOn (fountaindata) {
   roomnumber = clients[this.id].room
-  clients[rooms[clients[this.id].room][1]].emit('fountainOn', fountaindata)
-  clients[rooms[clients[this.id].room][2]].emit('fountainOn', fountaindata)
-  timeoutmanagers[roomnumber].setTimeout(function(){ fountainOff(roomnumber); }, 2000)
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[clients[this.id].room][i]].emit('fountainOn', fountaindata)
+    }
+  }
+  timeoutmanagers[roomnumber].setTimeout(function(){ fountainOff(roomnumber); }, 3000)
   timeoutmanagers[roomnumber].setTimeout(function(){ fountainOff2(roomnumber); }, 7000)
 }
 
 function fountainOff (roomnumber) {
-  clients[rooms[roomnumber][1]].emit('fountainOff')
-  clients[rooms[roomnumber][2]].emit('fountainOff')
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[roomnumber][i]].emit('fountainOff')
+    }
+  }
 }
 
 function fountainOff2 (roomnumber) {
-  clients[rooms[roomnumber][1]].emit('fountainOff2')
-  clients[rooms[roomnumber][2]].emit('fountainOff2')
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[roomnumber][i]].emit('fountainOff2')
+    }
+  }
 }
 
 function spearOn (speardata) {
   roomnumber = clients[this.id].room
-  clients[rooms[clients[this.id].room][1]].emit('spearOn', speardata)
-  clients[rooms[clients[this.id].room][2]].emit('spearOn', speardata)
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[clients[this.id].room][i]].emit('spearOn', speardata)
+    }
+  }
   timeoutmanagers[roomnumber].setTimeout(function(){ spearOff(roomnumber); }, 2000)
 }
 
 function spearOff (roomnumber) {
-  clients[rooms[roomnumber][1]].emit('spearOff')
-  clients[rooms[roomnumber][2]].emit('spearOff')
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[roomnumber][i]].emit('spearOff')
+    }
+  }
 }
 
 function onClientDisconnect () {
@@ -310,30 +329,56 @@ function onClientDisconnect () {
   roomnumber = clients[this.id].room
   timeoutmanagers[roomnumber].clearAllTimeout()
   intervalmanagers[roomnumber].clearAllInterval()
-  rooms[roomnumber] = []
   console.log('Room ' + roomnumber + ' Reset')
+  roomnumber = clients[this.id].room
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      if (clients[rooms[roomnumber][i]].id !== this.id) {
+        clients[rooms[roomnumber][i]].emit('remove player', {id: this.id})
+      }
+    }
+  }
+  rooms[roomnumber] = []
   clients[this.id] = undefined
   players.splice(players.indexOf(removePlayer), 1)
-  this.broadcast.emit('remove player', {id: this.id})
 }
 
 function onNewPlayer (data) {
-  var newPlayer = new Player(data.x, data.y, data.angle)
-  newPlayer.id = this.id
+  var newPlayer = new Player(data.playerType, data.x, data.y, data.angle, data.room)
+  if (data.playerType === 'permaspear') {
+    newPlayer.id = 'permaspear'
+  } else {
+    newPlayer.id = this.id
+  }
 
-  this.broadcast.emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY(), angle: newPlayer.getAngle()})
+  roomnumber = clients[this.id].room
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      if (clients[rooms[roomnumber][i]].id !== this.id) {
+        clients[rooms[roomnumber][i]].emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY(), angle: newPlayer.getAngle()})
+        console.log('emitting from: ' + this.id)
+      }
+    }
+  }
 
   var i, existingPlayer
   for (i = 0; i < players.length; i++) {
     existingPlayer = players[i]
-    this.emit('new player', {id: existingPlayer.id, x: existingPlayer.getX(), y: existingPlayer.getY(), angle: existingPlayer.getAngle()})
+    if (existingPlayer.getRoom() === this.room) {
+      if (existingPlayer.id !== this.id) {
+        this.emit('new player', {id: existingPlayer.id, x: existingPlayer.getX(), y: existingPlayer.getY(), angle: existingPlayer.getAngle()})
+      }
+    }
   }
   players.push(newPlayer)
 }
 
 function waterfire (data) {
-  clients[rooms[clients[this.id].room][1]].emit('otherWaterfire', {x: data.x, y: data.y})
-  clients[rooms[clients[this.id].room][2]].emit('otherWaterfire', {x: data.x, y: data.y})
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      clients[rooms[clients[this.id].room][i]].emit('otherWaterfire', {x: data.x, y: data.y})
+    }
+  }
 }
 
 function rip3 () {
@@ -357,7 +402,12 @@ function retry () {
 }
 
 function onMovePlayer (data) {
-  var movePlayer = playerById(this.id)
+  var movePlayer
+  if (data.playerType === 'permaspear') {
+    movePlayer = playerById('permaspear')
+  } else {
+    movePlayer = playerById(this.id)
+  }
 
   if (!movePlayer) {
     util.log('Player not found: ' + this.id)
@@ -368,7 +418,14 @@ function onMovePlayer (data) {
   movePlayer.setY(data.y)
   movePlayer.setAngle(data.angle)
 
-  this.broadcast.emit('move player', {id: movePlayer.id, x: movePlayer.getX(), y: movePlayer.getY(), angle: movePlayer.getAngle()})
+  roomnumber = clients[this.id].room
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      if (clients[rooms[roomnumber][i]].id !== this.id) {
+        clients[rooms[roomnumber][i]].emit('move player', {id: movePlayer.id, x: movePlayer.getX(), y: movePlayer.getY(), angle: movePlayer.getAngle()})
+      }
+    }
+  }
 }
 
 function playerById (id) {
