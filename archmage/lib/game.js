@@ -95,6 +95,7 @@ function onSocketConnection (client) {
   client.on('new player', onNewPlayer)
   client.on('move player', onMovePlayer)
   clients[client.id] = client
+  client.on('bossTP', bossTP)
   client.on('waterfire', waterfire)
   client.on('hitBoss', hitBoss)
   client.on('waterWallOn', waterWallOn)
@@ -106,6 +107,7 @@ function onSocketConnection (client) {
   client.on('retry', retry)
   client.on('new game', newGame)
   client.on('roomSelect', roomSelect)
+  client.on('ripFireSkull', ripFireSkull)
 }
 
 function roomSelect (data) {
@@ -137,24 +139,40 @@ function gameOver () {
   intervalmanagers[roomnumber].clearAllInterval()
   clients[rooms[clients[this.id].room][1]].emit('ripGame')
   clients[rooms[clients[this.id].room][2]].emit('ripGame')
+  var removePlayer = playerById(this.id)
+  if (!removePlayer) {
+    util.log('Player not found: ' + this.id)
+    return
+  }
+  players.splice(players.indexOf(removePlayer), 1)
+  for (var i=1; i < 3; i++) {
+    if (clients[rooms[roomnumber][i]] !== undefined) {
+      removePlayer = playerById(clients[rooms[roomnumber][i]].id)
+    }
+  }
+  players.splice(players.indexOf(removePlayer), 1)
+  if (!removePlayer) {
+    return
+  }
+  players.splice(players.indexOf(removePlayer), 1)
 }
 
 function Phase1MainLoop (roomnumber) {
-  for (var i = 0; i < 70; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ spawnTree(roomnumber); }, i*2000 + 600)
-  }
-  for (var i = 1; i < 70; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ bossTP(roomnumber); }, i*2000 - 1400)
-  }
-  for (var i = 10; i < 18; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ forwardFirewall(roomnumber); }, i*8000)
-    timeoutmanagers[roomnumber].setTimeout(function(){ timebomb(roomnumber); }, i*8000 - 4000)
-  }
   for (var i = 0; i < 35; i++) {
-    timeoutmanagers[roomnumber].setTimeout(function(){ laser(roomnumber); }, i*4000 + 2500)
+    //timeoutmanagers[roomnumber].setTimeout(function(){ spawnTree(roomnumber); }, i*2000 + 600)
   }
-  timeoutmanagers[roomnumber].setTimeout(function(){ splitFireWarning(roomnumber); }, 140000)
-  timeoutmanagers[roomnumber].setTimeout(function(){ splitFire(roomnumber); }, 143000)
+  for (var i = 1; i < 35; i++) {
+    //timeoutmanagers[roomnumber].setTimeout(function(){ bossTP(roomnumber); }, i*8000 - 1400)
+  }
+  for (var i = 5; i < 9; i++) {
+    //timeoutmanagers[roomnumber].setTimeout(function(){ forwardFirewall(roomnumber); }, i*8000)
+    //timeoutmanagers[roomnumber].setTimeout(function(){ timebomb(roomnumber); }, i*8000 - 4000)
+  }
+  for (var i = 0; i < 18; i++) {
+    //timeoutmanagers[roomnumber].setTimeout(function(){ laser(roomnumber); }, i*4000 + 2500)
+  }
+  //timeoutmanagers[roomnumber].setTimeout(function(){ splitFireWarning(roomnumber); }, 73000)
+  //timeoutmanagers[roomnumber].setTimeout(function(){ splitFire(roomnumber); }, 76000)
 }
 
 function spawnTree (roomnumber) {
@@ -164,11 +182,11 @@ function spawnTree (roomnumber) {
   timeoutmanagers[roomnumber].setTimeout(function(){ tree2(roomnumber, treeLoc); }, 1900)
 }
 
-function bossTP (roomnumber) {
+/*function bossTP (roomnumber) {
   var bossangle = Math.random() * 2 * Math.PI
   clients[rooms[roomnumber][1]].emit('bossTP', bossangle)
   clients[rooms[roomnumber][2]].emit('bossTP', bossangle)
-}
+}*/
 
 function tree2 (roomnumber, treeLoc) {
   clients[rooms[roomnumber][1]].emit('tree2', treeLoc)
@@ -258,6 +276,11 @@ function hitBoss () {
   clients[rooms[clients[this.id].room][2]].emit('updateArmor', armor)
 }
 
+function ripFireSkull () {
+  clients[rooms[clients[this.id].room][1]].emit('ripFireSkull')
+  clients[rooms[clients[this.id].room][2]].emit('ripFireSkull')
+}
+
 function waterWallOn (waterWallx, waterWally) {
   for (var i=1; i < 3; i++) {
     if (clients[rooms[roomnumber][i]] !== undefined) {
@@ -341,12 +364,17 @@ function onClientDisconnect () {
   rooms[roomnumber] = []
   clients[this.id] = undefined
   players.splice(players.indexOf(removePlayer), 1)
+  removePlayer = playerById(this.id + 'permaspear')
+  if (!removePlayer) {
+    return
+  }
+  players.splice(players.indexOf(removePlayer), 1)
 }
 
 function onNewPlayer (data) {
   var newPlayer = new Player(data.playerType, data.x, data.y, data.angle, data.room)
   if (data.playerType === 'permaspear') {
-    newPlayer.id = 'permaspear'
+    newPlayer.id = this.id + 'permaspear'
   } else {
     newPlayer.id = this.id
   }
@@ -356,7 +384,7 @@ function onNewPlayer (data) {
     if (clients[rooms[roomnumber][i]] !== undefined) {
       if (clients[rooms[roomnumber][i]].id !== this.id) {
         clients[rooms[roomnumber][i]].emit('new player', {id: newPlayer.id, x: newPlayer.getX(), y: newPlayer.getY(), angle: newPlayer.getAngle()})
-        console.log('emitting from: ' + this.id)
+        console.log('emitting from: ' + newPlayer.id)
       }
     }
   }
@@ -367,10 +395,16 @@ function onNewPlayer (data) {
     if (existingPlayer.getRoom() === this.room) {
       if (existingPlayer.id !== this.id) {
         this.emit('new player', {id: existingPlayer.id, x: existingPlayer.getX(), y: existingPlayer.getY(), angle: existingPlayer.getAngle()})
+        console.log('emitting existing: ' + existingPlayer.id)
       }
     }
   }
   players.push(newPlayer)
+}
+
+function bossTP (target) {
+  clients[rooms[clients[this.id].room][1]].emit('bossTP', target)
+  clients[rooms[clients[this.id].room][2]].emit('bossTP', target)
 }
 
 function waterfire (data) {
@@ -404,7 +438,7 @@ function retry () {
 function onMovePlayer (data) {
   var movePlayer
   if (data.playerType === 'permaspear') {
-    movePlayer = playerById('permaspear')
+    movePlayer = playerById(this.id + 'permaspear')
   } else {
     movePlayer = playerById(this.id)
   }

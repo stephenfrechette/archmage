@@ -78,6 +78,7 @@ var setEventHandlers = function () {
   socket.on('fountainOn', fountainOn)
   socket.on('fountainOff', fountainCool)
   socket.on('fountainOff2', fountainCool2)
+  socket.on('ripFireSkull', ripFireSkull)
   socket.on('rip3', ripFireskull4)
   socket.on('ripGame', gameOver)
   socket.on('laser0', laser0)
@@ -87,7 +88,7 @@ var setEventHandlers = function () {
   socket.on('timebomb', timebomb1)
   socket.on('timebomb2', timebomb2)
   socket.on('retryready', retryready)
-  socket.on('bossTP', bossTP)
+  socket.on('bossTP', bossTP1)
 }
 
 var socket = io.connect()
@@ -106,6 +107,7 @@ function preload () {
   game.load.spritesheet('z', 'assets/z.png')
   game.load.spritesheet('c', 'assets/c.png')
   game.load.spritesheet('!', 'assets/!.png')
+  game.load.spritesheet('boss', 'assets/boss.png')
   game.load.spritesheet('bowser', 'assets/Bowser.png')
   game.load.spritesheet('tree', 'assets/tree.png')
   game.load.spritesheet('waterball', 'assets/waterball.png')
@@ -117,7 +119,7 @@ function preload () {
   game.load.spritesheet('fireskull', 'assets/fireskull.png', 40, 40)
   game.load.spritesheet('greenarea', 'assets/greenarea.png')
   game.load.spritesheet('swipe', 'assets/pink.jpg', 32, 32)
-  game.load.spritesheet('bluesquare', 'assets/blue.png', 32, 32)
+  game.load.spritesheet('bluesquare', 'assets/char1.png')
   game.load.spritesheet('cyansquare', 'assets/cyan.jpg', 32, 32)
   game.load.spritesheet('singleskullbar', 'assets/yellow.jpg', 40, 8)
   game.load.spritesheet('permaspear', 'assets/yellow.jpg', 20, 20)
@@ -127,6 +129,8 @@ function preload () {
   game.load.spritesheet('treeconfirm', 'assets/green.png', 16, 16)
   game.load.spritesheet('pinkdamagebar', 'assets/pink.jpg', 15, 100)
   game.load.spritesheet('laserWarning', 'assets/red.jpg', 3, 1600)
+  game.load.spritesheet('healthbar1', 'assets/red.jpg', 48, 8)
+  game.load.spritesheet('healthbar2', 'assets/pink.jpg', 48, 8)
   game.load.spritesheet('reallaser', 'assets/orange.jpg', 25, 1600)
   game.load.spritesheet('redTell', 'assets/red.jpg', 770, 770)
   game.load.spritesheet('redTell2', 'assets/red.jpg', 50, 50)
@@ -136,10 +140,12 @@ function preload () {
   game.load.spritesheet('woodspear', 'assets/woodspear.png')
   game.load.spritesheet('whitecircle', 'assets/whitecircle.png')
   game.load.spritesheet('halfcircle', 'assets/whitecircle.png', 300, 150)
+  game.load.spritesheet('grass', 'assets/grass.png')
 
   game.load.bitmapFont('carrier_command', 'assets/fonts/carrier_command.png', 'assets/fonts/carrier_command.xml');
 
   game.load.audio('oof', ['assets/roblox-death-sound_1.mp3', 'roblox-death-sound_1.ogg'])
+  game.load.audio('lasersound', 'assets/Laser_Composite.wav')
   //game.load.audio('boss1a', ['assets/boss1a.mp3', 'assets/boss1a.ogg'])
   //game.load.audio('boss1b', ['assets/boss1b.mp3', 'assets/boss1b.ogg'])
 
@@ -288,7 +294,7 @@ function createTutorial () {
   window.player
   window.oof
   window.permaspear
-  window.swipe
+  window.swipeaudio
   window.swipe2
   window.swipetTime = 0
   window.swipeCheck = false
@@ -309,7 +315,7 @@ function createTutorial () {
 
   tutorial = true
 
-  oof = game.add.audio('oof')
+  //oof = game.add.audio('oof')
   land = game.add.tileSprite(0, 0, 800, 600, 'earth')
   land.fixedToCamera = true
   tutorialTxt = game.add.bitmapText(-600, -700, 'carrier_command','Orange means\n\nblock\n\nBlock with\n\nSPACEBAR', 34);
@@ -321,7 +327,7 @@ function createTutorial () {
   game.physics.arcade.enable(player, Phaser.Physics.ARCADE);
   player.body.maxVelocity.setTo(400, 400)
   player.body.collideWorldBounds = true
-  player.body.setSize(24, 24, 4, 4)
+  player.body.setSize(2, 2, 15, 15)
   player.bringToTop()
   cursors = game.input.keyboard.createCursorKeys()
 
@@ -370,8 +376,8 @@ function updateTutorial () {
   }
 
   if (moveCheck === true) {
-    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) && blockCheck2 === false) {
-      moveCheck = false;
+    if (game.input.keyboard.isDown(Phaser.Keyboard.V) && blockCheck2 === false) {
+      moveCheck = 'block';
       blockCheck = true;
       blockCheck2 = true;
       player.loadTexture('redsquare', 0)
@@ -450,7 +456,9 @@ function create () {
   window.radialAngle
   window.weaponE
 
-  window.health = 3
+  window.timebombvuln = false
+
+  window.health = 4
   window.invulnerable = false
 
   window.currentSpeed = 0
@@ -464,15 +472,21 @@ function create () {
 
   window.repeatCheck = false
 
+  window.auto1Check = false
+
+  window.bossAction = 'noAction'
+  window.target = player
   window.treeWarning
   window.tree
   window.isTree = false
+  window.isTrees = false
   window.forwardFire = []
   window.forwardFirewallCheck = false
   window.splitFire = []
   window.fireskull = []
   window.skullHealth = 150
   window.skullHealth2 = 3
+  window.skullArea
   window.waterWall = []
   window.waterWallCheck1 = false
   window.waterWallCheck2 = false
@@ -505,6 +519,7 @@ function create () {
   window.swipeCheck2 = false
   window.materialGained = false
   window.materialSpearCheck = false
+  window.materialSpearWater = 0
   window.craftWarningEventHandlers
   window.craftCheck = false
   window.prevCraftCheck = false
@@ -546,6 +561,9 @@ function create () {
   window.laserline
   window.lasernum = 0
   window.laserTell
+  window.lasersline = []
+  window.lasers = []
+  window.lasers2 = []
   window.timebomb = []
   window.timebombCheck = false
   window.timebombTime = 0
@@ -558,6 +576,7 @@ function create () {
   window.TPtell = []
   window.TPCheck = false
   window.TPTime = 0
+  window.dodgeCheck = false
   window.blockCheck = false
   window.blockCheck2 = false
   window.materialCollectedCheck = false
@@ -568,39 +587,51 @@ function create () {
 
   window.moveCheck = true
 
+  window.lasersound
+
+  window.grass = []
+
   playerstuff = game.add.group()
   bossstuff = game.add.group()
 
   //boss1music[0] = game.add.audio('boss1a')
   //boss1music[1] = game.add.audio('boss1b')
-  oof = game.add.audio('oof')
+  //oof = game.add.audio('oof')
+  lasersound = game.add.audio('lasersound')
   enemies = []
 
   land = game.add.tileSprite(0, 0, 800, 600, 'earth')
   land.fixedToCamera = true
 
+  /*for (i = 0; i < 9999; i++) {
+    var grassx = Math.random() * -800
+    var grassy = Math.random() * -600 - 200
+    grass[i] = game.add.sprite(grassx, grassy, 'grass')
+    grass[i].anchor.setTo(.5, .5)
+    game.physics.arcade.enable(grass[i])
+  }*/
+
   var startX = Math.round(Math.random() * (1000) - 500)
   var startY = Math.round(Math.random() * (1000) - 500)
   player = game.add.sprite(startX, startY, 'bluesquare')
   player.anchor.setTo(0.5, 0.5)
-  player.animations.add('move', [0, 1, 2, 3, 4, 5, 6, 7], 20, true)
-  player.animations.add('stop', [3], 20, true)
+  //player.animations.add('move', [0, 1, 2, 3, 4, 5, 6, 7], 20, true)
+  //player.animations.add('stop', [3], 20, true)
   player.game.physics.arcade.enableBody(player)
   game.physics.arcade.enable(player, Phaser.Physics.ARCADE);
   player.body.maxVelocity.setTo(400, 400)
   player.body.collideWorldBounds = true
-  player.body.setSize(24, 24, 4, 4)
+  player.body.setSize(2, 2, 15, 15)
 
   player.bringToTop()
 
   if (retryCheck === true) {
-    enemies.push(new RemotePlayer(otherPlayer[0], game, player, otherPlayer[1], otherPlayer[2], otherPlayer[3], playernum))
+    //enemies.push(new RemotePlayer(otherPlayer[0], game, player, otherPlayer[1], otherPlayer[2], otherPlayer[3], playernum))
     if (playernum === 1) {
       socket.emit('new game')
     }
-  } else {
-    socket.emit('new player', { playerType: 'player', x: player.x, y: player.y, angle: player.angle, room: roomnumber })
   }
+  socket.emit('new player', { playerType: 'player', x: player.x, y: player.y, angle: player.angle, room: roomnumber })
 
   //game.camera.follow(player)
   //game.camera.deadzone = new Phaser.Rectangle(300, 300, 500, 300)
@@ -608,25 +639,27 @@ function create () {
 
   cursors = game.input.keyboard.createCursorKeys()
 
-  for (i = 0; i < 4; i++) {
+  for (i = 0; i < 8; i++) {
     skullfire[i] = game.add.weapon(500, 'fireball')
-    skullfire[i].bulletKillType = Phaser.Weapon.KILL_WORD_BOUNDS;
+    //skullfire[i].bulletKillType = Phaser.Weapon.KILL_WORD_BOUNDS;
     skullfire[i].bulletSpeed = 150;
-    skullfire[i].fireRate = 800;
+    skullfire[i].fireRate = 200;
     skullfire[i].setBulletBodyOffset(4, 4, 3, 3)
   }
   skullfire[3].onFire.add(skullfireAngleSet)
 
   waterfire = game.add.weapon(50, 'waterball');
-  waterfire.bulletKillType = Phaser.Weapon.KILL_WORLD_BOUNDS;
-  waterfire.bulletSpeed = 800
-  waterfire.fireRate = 100;
+  waterfire.bulletKillType = Phaser.Weapon.KILL_DISTANCE;
+  waterfire.bulletKillDistance = 32*2
+  waterfire.bulletSpeed = 300
+  waterfire.fireRate = 25;
+  waterfire.bulletAngleOffset = 90;
+  waterfire.bulletAngleVariance = 22.5;
 
   if (playernum === 2) {
-      permaspear = game.add.sprite(player.x, player.y, 'permaspear')
-      permaspear.anchor.setTo(.5, .5)
-      game.physics.arcade.enable(permaspear, Phaser.Physics.ARCADE);
-      socket.emit('new player', { playerType: 'permaspear', x: permaspear.x, y: permaspear.y, angle: permaspear.angle, room: roomnumber })
+      //permaspear = game.add.sprite(player.x, player.y, 'permaspear')
+      //permaspear.anchor.setTo(.5, .5)
+      //game.physics.arcade.enable(permaspear, Phaser.Physics.ARCADE);
   }
 }
 
@@ -635,31 +668,76 @@ function gameOver () {
 }
 
 function otherWaterfire (data) {
+  auto1Check = data
+  timeoutmanager.setTimeout(auto1Reset, 500)
+  timeoutmanager.setTimeout(auto1Reset2, 1000)
+}
+
+function auto1Reset() {
+  auto1Check = true
+}
+
+function auto1Reset2() {
+  auto1Check = false
+}
+
+function auto1() {
   if (playernum === 2 && gameStart === true) {
-    waterfire.fire(enemies[0].player, data.x, data.y);
+    waterfire.fire(enemies[0].player, auto1Check.x, auto1Check.y);
+  } else {
+    waterfire.fire(player, auto1Check.x, auto1Check.y)
   }
 }
 
 function ripHealth () {
   if (invulnerable === false) {
-    for (var i=0; i<health; i++) {
-      heart[i].alpha = 1
+    //for (var i=0; i<health; i++) {
+    //  heart[i].alpha = 1
+    //}
+    //oof.play()
+    if (blockCheck === false) {
+      health = health - 1/15 * deltaTime
+    } else {
+      health = health - 1/15 / 4 * deltaTime
     }
-    oof.play()
-    console.log('health: ' + health)
-    invulnerable = true
-    timeoutmanager.setTimeout(vulnerable, 1500)
-    player.alpha = .2
-    invulnframesCheck = setInterval(invulnframes, 100)
-    if (health === 3) {
-      health = 2
-      heart[health].destroy()
-    } else if (health === 2) {
-      health = 1
-      heart[health].destroy()
-    } else if (health === 1) {
+    healthbar1.scale.setTo(health/4, 1)
+    //invulnerable = true
+    //timeoutmanager.setTimeout(vulnerable, 1500)
+    //player.alpha = .2
+    //invulnframesCheck = setInterval(invulnframes, 100)
+    //if (health === 3) {
+    //  health = 2
+    //  heart[health].destroy()
+    //} else if (health === 2) {
+    //  health = 1
+    //  heart[health].destroy()
+    if (health < 0) {
+      socket.emit('gameOver')
+    }
+  }
+}
+
+function ripHealthBig () {
+  if (invulnerable === false) {
+    //for (var i=0; i<health; i++) {
+    //  heart[i].alpha = 1
+    //}
+    //oof.play()
+    health = health - 1/5 * deltaTime
+    healthbar1.scale.setTo(health/4, 1)
+    //invulnerable = true
+    //timeoutmanager.setTimeout(vulnerable, 1500)
+    //player.alpha = .2
+    //invulnframesCheck = setInterval(invulnframes, 100)
+    //if (health === 3) {
+    //  health = 2
+    //  heart[health].destroy()
+    //} else if (health === 2) {
+    //  health = 1
+    //  heart[health].destroy()
+    //} else if (health === 1) {
       //socket.emit('gameOver')
-    }
+    //}
   }
 }
 
@@ -699,20 +777,26 @@ function print3() {
   }
   var randmus1 = Math.random() * 2
   var randmus = Math.floor(randmus1)
-  heart[0] = player.addChild(game.make.sprite(-15, -25, 'heart'))
-  heart[1] = player.addChild(game.make.sprite(0, -25, 'heart'))
-  heart[2] = player.addChild(game.make.sprite(15, -25, 'heart'))
-  log[0] = player.addChild(game.make.sprite(-20, 25, 'log'))
-  log[1] = player.addChild(game.make.sprite(-10, 25, 'log'))
-  log[2] = player.addChild(game.make.sprite(0, 25, 'log'))
-  log[3] = player.addChild(game.make.sprite(10, 25, 'log'))
-  log[4] = player.addChild(game.make.sprite(20, 25, 'log'))
-  woodspear[0] = player.addChild(game.make.sprite(-20, 35, 'woodspear'))
-  woodspear[1] = player.addChild(game.make.sprite(-10, 35, 'woodspear'))
-  woodspear[2] = player.addChild(game.make.sprite(0, 35, 'woodspear'))
-  woodspear[3] = player.addChild(game.make.sprite(10, 35, 'woodspear'))
-  woodspear[4] = player.addChild(game.make.sprite(20, 35, 'woodspear'))
-  for (var i=0; i<3; i++) {
+  window.healthbar2 = player.addChild(game.make.sprite(0, -25, 'healthbar2'))
+  window.healthbar1 = player.addChild(game.make.sprite(0, -25, 'healthbar1'))
+  //heart[0] = player.addChild(game.make.sprite(-15, -25, 'heart'))
+  //heart[1] = player.addChild(game.make.sprite(0, -25, 'heart'))
+  //heart[2] = player.addChild(game.make.sprite(15, -25, 'heart'))
+  //log[0] = player.addChild(game.make.sprite(-20, 25, 'log'))
+  //log[1] = player.addChild(game.make.sprite(-10, 25, 'log'))
+  //log[2] = player.addChild(game.make.sprite(0, 25, 'log'))
+  //log[3] = player.addChild(game.make.sprite(10, 25, 'log'))
+  //log[4] = player.addChild(game.make.sprite(20, 25, 'log'))
+  //woodspear[0] = player.addChild(game.make.sprite(-20, 35, 'woodspear'))
+  //woodspear[1] = player.addChild(game.make.sprite(-15, 35, 'woodspear'))
+  //woodspear[2] = player.addChild(game.make.sprite(-10, 35, 'woodspear'))
+  //woodspear[3] = player.addChild(game.make.sprite(-5, 35, 'woodspear'))
+  //woodspear[4] = player.addChild(game.make.sprite(0, 35, 'woodspear'))
+  //woodspear[5] = player.addChild(game.make.sprite(5, 35, 'woodspear'))
+  //woodspear[6] = player.addChild(game.make.sprite(10, 35, 'woodspear'))
+  //woodspear[7] = player.addChild(game.make.sprite(15, 35, 'woodspear'))
+  //woodspear[8] = player.addChild(game.make.sprite(20, 35, 'woodspear'))
+  /*for (var i=0; i<3; i++) {
     heart[i].scale.setTo(.1)
     heart[i].anchor.setTo(.5, .5)
   }
@@ -720,20 +804,21 @@ function print3() {
     log[i].scale.setTo(.1)
     log[i].anchor.setTo(.5, .5)
     log[i].alpha = 0
-  }for (var i=0; i<5; i++) {
+  }for (var i=0; i<9; i++) {
     woodspear[i].scale.setTo(.1)
     woodspear[i].anchor.setTo(.5, .5)
     woodspear[i].alpha = 0
-  }
+  }*/
   //boss1music[randmus].play()
   //boss1music[randmus].volume = .2
 }
 
 function bossSpawn1() {
-  timeoutmanager.setTimeout(print3, 10000)
-  timeoutmanager.setTimeout(print2, 11000)
-  timeoutmanager.setTimeout(print1, 12000)
-  timeoutmanager.setTimeout(bossSpawn2, 13000)
+  window.targets = [player, enemies[0]]
+  timeoutmanager.setTimeout(print3, 1000)
+  timeoutmanager.setTimeout(print2, 2000)
+  timeoutmanager.setTimeout(print1, 3000)
+  timeoutmanager.setTimeout(bossSpawn2, 4000)
   console.log('spawning boss')
   socket.on('tree', tree)
 }
@@ -742,17 +827,28 @@ function bossSpawn2() {
   console.log('TIME TO DIE')
   player.angle = 0
   inPlay = true;
-  bowser = game.add.sprite(-400, -800, 'bowser')
-  bowser.scale.setTo(.1, .1)
-  bowser.anchor.setTo(.5, .5)
-  game.physics.arcade.enable(bowser, Phaser.Physics.ARCADE);
+  if (playernum === 2) {
+    bowser = game.add.sprite(-400, -800, 'boss')
+    bowser.anchor.setTo(.5, .5)
+    game.physics.arcade.enable(bowser, Phaser.Physics.ARCADE);
+    socket.emit('new player', { playerType: 'permaspear', x: bowser.x, y: bowser.y, angle: bowser.angle, room: roomnumber })
+  }
+  prepare1()
   //armorbar = game.add.sprite(-400, -800, 'armorbar')
   //armorbar.scale.setTo(.1, .01)
   gameStart = true
   mainPhase = true
-  for (var i=0; i<3; i++) {
-    heart[i].alpha = 0
-  }
+  //for (var i=0; i<3; i++) {
+  //  heart[i].alpha = 0
+  //}
+}
+
+function dodgeReset () {
+  dodgeCheck = false
+}
+
+function dodgeReset2 () {
+  dodgeCheck = true
 }
 
 function blockReset () {
@@ -782,29 +878,132 @@ function bossAngleGet(bossangle) {
   return [newbossx, newbossy]
 }
 
-function bossTP(bossangle) {
-  var newbosspos = bossAngleGet(bossangle)
-  TPtell[0] = game.add.sprite(newbosspos[0], newbosspos[1], 'whitecircle')
-  TPtell[0].anchor.setTo(.5,.5)
+function prepare1 () {
+  bossAction = 'prepare1'
+}
+
+function bossTP(targettp) {
+  if (bossAction === 'prepare1') {
+     console.log('preparing')
+    socket.emit('bossTP', targettp)
+  }
+  bossAction = 'tp'
+}
+
+function bossTP1(targettp2) {
+  target = targettp2
+  TPTime = 0
+  //var newbosspos = bossAngleGet(bossangle)
+  TPtell[0] = game.add.sprite(bowser.x, bowser.y, 'halfcircle')
+  TPtell[0].anchor.setTo(.5, 1)
   TPtell[0].alpha = .25
-  TPtell[0].scale.setTo(.25)
   TPtell[0].tint = 0xFF0000
-  TPtell[1] = game.add.sprite(newbosspos[0], newbosspos[1], 'whitecircle')
-  TPtell[1].anchor.setTo(.5,.5)
+  TPtell[1] = game.add.sprite(bowser.x, bowser.y, 'halfcircle')
+  TPtell[1].anchor.setTo(.5, 1)
   TPtell[1].alpha = .5
   TPtell[1].scale.setTo(.00001)
   TPtell[1].tint = 0xFF0000
-  timeoutmanager.setTimeout(function(){ bossTP2(newbosspos); }, 1000)
-  TPCheck = true
+  if (target === playernum) {
+    var angle = Math.atan2(bowser.y - player.y, bowser.x - player.x) * 180 / Math.PI - 90
+    TPtell[0].angle = angle
+    TPtell[1].angle = angle
+  } else {
+    var angle = Math.atan2(bowser.y - enemies[0].player.y, bowser.x - enemies[0].player.x) * 180 / Math.PI - 90
+    TPtell[0].angle = angle
+    TPtell[1].angle = angle
+  }
+  TPCheck = 'left'
+  bossAction = 'tp'
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 500)
+  timeoutmanager.setTimeout(function(){ bossTP2(); }, 800)
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 1300)
+  timeoutmanager.setTimeout(function(){ bossTP3(); }, 1700)
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 2000)
+  timeoutmanager.setTimeout(function(){ bossTP4(); }, 2200)
+  timeoutmanager.setTimeout(function(){ bossTPReset2(); }, 5000)
 }
 
-function bossTP2(newbosspos) {
-  TPCheck = false
+function bossTPReset() {
   TPTime = 0
-  bowser.x = newbosspos[0]
-  bowser.y = newbosspos[1]
+  var angle = Math.atan2(bowser.y - player.y, bowser.x - player.x) * 180 / Math.PI - 90
+  //bowser.x = newbosspos[0]
+  //bowser.y = newbosspos[1]
+  var newangle = Math.abs(angle - TPtell[0].angle)
+  if (TPCheck === 'left' && (newangle < 90 || (newangle > 270 && newangle < 450)) && Phaser.Math.distance(player.x, player.y, bowser.x, bowser.y) < 150) {
+    health = health - 1/2
+    healthbar1.scale.setTo(health/4, 1)
+    moveCheck = 'bosstp'
+    timeoutmanager.setTimeout(function(){ bossTPFailReset(); }, 300)
+  } else if (TPCheck === 'right' && (newangle < 90 || (newangle > 270 && newangle < 450)) && Phaser.Math.distance(player.x, player.y, bowser.x, bowser.y) < 150) {
+    health = health - 1/2
+    healthbar1.scale.setTo(health/4, 1)
+    moveCheck = 'bosstp'
+    timeoutmanager.setTimeout(function(){ bossTPFailReset(); }, 300)
+  } else if (TPCheck === 'block' && Phaser.Math.distance(player.x, player.y, bowser.x, bowser.y) < 150) {
+    if (blockCheck === true) {
+      health = health - 1/8
+    } else {
+      health = health - 1/2
+      moveCheck = 'bosstp'
+      timeoutmanager.setTimeout(function(){ bossTPFailReset(); }, 300)
+    }
+    healthbar1.scale.setTo(health/4, 1)
+  }
   TPtell[0].destroy()
   TPtell[1].destroy()
+  TPCheck = false
+}
+
+function bossTPFailReset() {
+  moveCheck = true
+}
+
+function bossTPReset2() {
+  TPCheck = false
+  bossAction = 'prepare1'
+}
+
+function bossTP2 () {
+  TPTime = 0
+  //var newbosspos = bossAngleGet(bossangle)
+  TPtell[0] = game.add.sprite(bowser.x, bowser.y, 'halfcircle')
+  TPtell[0].anchor.setTo(.5, 1)
+  TPtell[0].alpha = .25
+  TPtell[0].tint = 0xFF0000
+  TPtell[1] = game.add.sprite(bowser.x, bowser.y, 'halfcircle')
+  TPtell[1].anchor.setTo(.5, 1)
+  TPtell[1].alpha = .5
+  TPtell[1].scale.setTo(.00001)
+  TPtell[1].tint = 0xFF0000
+  if (target === playernum) {
+    var angle = Math.atan2(bowser.y - player.y, bowser.x - player.x) * 180 / Math.PI - 90
+    TPtell[0].angle = angle
+    TPtell[1].angle = angle
+  } else {
+    var angle = Math.atan2(bowser.y - enemies[0].player.y, bowser.x - enemies[0].player.x) * 180 / Math.PI - 90
+    TPtell[0].angle = angle
+    TPtell[1].angle = angle
+  }
+  TPCheck = 'right'
+}
+
+function bossTP3 () {
+  TPTime = 0
+  //var newbosspos = bossAngleGet(bossangle)
+  TPtell[0] = game.add.sprite(bowser.x, bowser.y, 'whitecircle')
+  TPtell[0].anchor.setTo(.5, .5)
+  TPtell[0].alpha = .25
+  TPtell[0].tint = 0xFF8C00
+  TPtell[1] = game.add.sprite(bowser.x, bowser.y, 'whitecircle')
+  TPtell[1].anchor.setTo(.5, .5)
+  TPtell[1].alpha = .5
+  TPtell[1].scale.setTo(.00001)
+  TPtell[1].tint = 0xFF8C00
+  TPCheck = 'block'
+}
+
+function bossTP4 () {
+  TPCheck = 'bullets1'
 }
 
 function tree(treeLoc) {
@@ -853,8 +1052,39 @@ function forwardFirewall3 () {
 }
 
 function laser0 () {
+  //lasersound.play()
   //laserTell = bowser.addChild(game.make.sprite(0, 170, 'redTell'))
   //laserTell.anchor.setTo(.5, .5)
+  var randx1
+  var randx2
+  var randy1
+  var randy2
+  var angle
+  for (var i=0; i<10; i++) {
+    randx1 = Math.random() * -800
+    randx2 = Math.random() * -800
+    randy1 = Math.random() * -600 - 200
+    randy2 = Math.random() * -600 - 200
+    angle = Math.atan((randx1 - randx2) / (randy1 - randy2))
+    /*lasersline[i] = new Phaser.Line(randx1, randy1, randx2, randy2)
+    lasers[i] = game.add.sprite(randx1[5:10 PM] Orysk: That works, randy1, 'reallaser')
+    lasers[i].anchor.setTo(.5, .5)
+    lasers[i].alpha = .25
+    lasers[i].scale.setTo(.05, 1)
+    lasers[i].tint = 0xFF0000
+    //lasers2[i] = game.add.sprite(randx1, randy1, 'reallaser')
+    //lasers2[i].anchor.setTo(.5, .5)
+    //lasers2[i].alpha = .5
+    //lasers2[i].scale.setTo(.00001, 1)
+    //lasers2[i].tint = 0xFF0000
+    if ((randy1 - randy2) < 0) {
+      lasers[i].angle = 180 - (angle * 180 / Math.PI)
+      //lasers2[i].angle = 180 - (angle * 180 / Math.PI)
+    } else {
+      lasers[i].angle = 360 - (angle * 180 / Math.PI)
+      //lasers2[i].angle = 360 - (angle * 180 / Math.PI)
+    }*/
+  }
 }
 
 function laser1 (data) {
@@ -890,6 +1120,10 @@ function laser1 (data) {
 
 function laserfunc2 (data) {
   laserCheck0 = false
+  //for (var i=0; i<10; i++) {
+  //  lasers[i].scale.setTo(.5, 1)
+    //lasers2[i].destroy()
+  //}
   laser2.destroy()
   if (inPlay === true) {
     laser.destroy()
@@ -920,6 +1154,10 @@ function laser3 () {
   laser.destroy()
   laserCheck2 = false
   //laserTell.destroy()
+  //for (var i=0; i<10; i++) {
+  //  lasers[i].destroy()
+    //lasers2[i].destroy()
+  //}
 }
 
 function timebomb1 () {
@@ -929,8 +1167,8 @@ function timebomb1 () {
   timebomb[3] = enemies[0].player.addChild(game.make.sprite(0, 0, 'whitecircle'))
   timebomb[0].tint = 0xFF8C00
   timebomb[2].tint = 0xFF8C00
-  timebomb[1].tint = 0xFF0000
-  timebomb[3].tint = 0xFF0000
+  timebomb[1].tint = 0xFF8C00
+  timebomb[3].tint = 0xFF8C00
   for (var i = 0; i < 3; i++) {
     timebomb[i].scale.setTo(2)
     timebomb[i].alpha = .25
@@ -946,13 +1184,16 @@ function timebomb1 () {
 
 function timebomb2 () {
   timebombCheck = false
+  timebombvuln = true
   timebombTime = 0
-  if (Phaser.Math.distance(player.x, player.y, enemies[0].player.x, enemies[0].player.y) < 300) {
-    ripHealth()
+  for (var i = 0; i < 4; i++) {
+    timebomb[i].tint = 0xFF0000
   }
-  if (blockCheck === false) {
-    ripHealth()
-  }
+  timeoutmanager.setTimeout(timebomb3, 300)
+}
+
+function timebomb3 () {
+  timebombvuln = false
   for (var i = 0; i < 4; i++) {
     timebomb[i].destroy()
   }
@@ -984,6 +1225,27 @@ function splitFire1 () {
     game.physics.arcade.enable(splitFire[i], Phaser.Physics.ARCADE);
     splitFireCheck = true
   }
+  tree = []
+  if (playernum === 2) {
+    for (var i = 0; i < 3; i++) {
+      tree[i] = game.add.sprite(-100*i - 100, -700, 'tree')
+    }
+    for (var i = 3; i < 6; i++) {
+      tree[i] = game.add.sprite(-100*(i - 3) - 500, -700, 'tree')
+    }
+    for (var i = 6; i < 9; i++) {
+      tree[i] = game.add.sprite(-100*(i - 6) - 100, -300, 'tree')
+    }
+    for (var i = 9; i < 12; i++) {
+      tree[i] = game.add.sprite(-100*(i - 9) - 500, -300, 'tree')
+    }
+    for (var i = 0; i < 12; i++) {
+      tree[i].anchor.setTo(.5, .5)
+      tree[i].scale.setTo(.1)
+      game.physics.arcade.enable(tree[i], Phaser.Physics.ARCADE);
+    }
+  }
+  isTrees = true
   for (var i = 0; i < 2; i++) {
     fireskull[i] = game.add.sprite(-400*i - 200, -500, 'fireskull')
     fireskull[i].anchor.setTo(.5, .5)
@@ -995,10 +1257,18 @@ function splitFire1 () {
   skullrepeat = setInterval(skullCirclefunc, 3500)
 }
 
-function damageSkull () {
-  skullHealth = skullHealth - 1
-  console.log('skullHealth: ' + skullHealth)
-  singleskullbar.scale.setTo(skullHealth / 150, 1)
+function damageSkull (skull, bullet) {
+  bullet.kill()
+  if (skullHealth > 0) {
+    skullHealth = skullHealth - 1
+  } else {
+    socket.emit('ripFireSkull')
+  }
+  if (splitFireCheck === true) {
+    singleskullbar.scale.setTo(skullHealth / 100, 1)
+  } else if (singleSkullCheck === true) {
+    singleskullbar.scale.setTo(skullHealth / 200, 1)
+  }
 }
 
 function inSkullCirclefunc () {
@@ -1025,14 +1295,14 @@ function skullCirclefunc () {
   if (playernum === 1) {
     var randomx = -600
     var randomy = -500
-    while (randomx > -630 && randomx < -570 && randomy > -530 && randomy < -470) {
+    while (randomx > -670 && randomx < -530 && randomy > -570 && randomy < -430) {
       randomx = Math.random() * 340 - 770
       randomy = Math.random() * 340 - 670
     }
   } else {
     var randomx = -200
     var randomy = -500
-    while (randomx > -250 && randomx < -150 && randomy > -550 && randomy < -450) {
+    while (randomx > -270 && randomx < -130 && randomy > -570 && randomy < -430) {
       randomx = Math.random() * 340 - 370
       randomy = Math.random() * 340 - 670
     }
@@ -1061,12 +1331,13 @@ function skullCirclefunc2 () {
       skullCircleTime = 0
     }
     skullCircles = true
-    var randomx = 0
-    var randomy = 0
-    while ((randomx + 400) * (randomx + 400) + (randomy + 500) * (randomy + 500) > 180 * 180)  {
-      randomx = Math.random() * 400 - 600
-      randomy = Math.random() * 400 - 700
+    var randomx = -400
+    var randomy = -500
+    while (((randomx + 400) * (randomx + 400) + (randomy + 500) * (randomy + 500)) < (160 * 160))  {
+      randomx = Math.random() * 500 - 650
+      randomy = Math.random() * 500 - 750
     }
+    console.log(randomx + ', ' + randomy)
   }
   skullCircle[0] = game.add.sprite(randomx, randomy, 'greenarea')
   skullCircle[0].scale.setTo(.1)
@@ -1167,19 +1438,20 @@ function onNewPlayer (data) {
     console.log('Duplicate player!')
     return
   }
-  if (enemies[0] !== undefined && data.id !== 'permaspear') {
+  /*if (enemies[0] !== undefined && data.id !== 'permaspear') {
     console.log(enemies[0])
     enemies[0].player.destroy()
     enemies = []
-  }
+  }*/
   otherPlayer[0] = data.id
   otherPlayer[1] = data.x
   otherPlayer[2] = data.y
   otherPlayer[3] = data.angle
   enemies.push(new RemotePlayer(data.id, game, player, data.x, data.y, data.angle, playernum))
   console.log('new enemy' + enemies)
-  if (data.id === 'permaspear') {
-    enemies[1].player.loadTexture('permaspear')
+  if (enemies[1] !== undefined) {
+    enemies[1].player.loadTexture('boss')
+    bowser = enemies[1].player
   }
 }
 
@@ -1226,28 +1498,20 @@ function hitBoss (boss, bullet) {
   bullet.kill()
 }
 
-function hitCraft (player, bullet) {
-  //waterUI.destroy()
-  //fireUI.destroy()
-  material += 1
-  console.log('material: ' + material)
-  bullet.kill()
-  if (material > 50) {
-    craftcounter = craftcounter - 4
-    materialCollectedCheck = false
-    if (craftcounter === 0) {
-      for (var i=0; i<5; i++) {
-        log[i].alpha = 0
-      }
-    } else {
-      for (var i=1; i<5; i++) {
-        log[i].alpha = 0
-      }
+function hitCraft () {
+  materialCollectedCheck = false
+  if (craftcounter === 0) {
+    for (var i=0; i<5; i++) {
+      log[i].alpha = 0
     }
-    woodspear[spearCounter].alpha = 1
-    spearCounter = spearCounter + 1
-    material = 0
+  } else {
+    for (var i=1; i<5; i++) {
+      log[i].alpha = 0
+    }
   }
+  woodspear[spearCounter].alpha = 1
+  spearCounter = spearCounter + 1
+  material = 0
 }
 
 function ripbullet (splitFire, bullet) {
@@ -1291,21 +1555,31 @@ function waterSpear () {
 }
 
 function skullfireAngleSet () {
-  skullfireAngle += 15
-  if (skullfireAngle === 90) {
-    skullfireAngle = 0
+  if (splitFireCheck === true) {
+    skullfireAngle += 15
+    if (skullfireAngle === 90) {
+      skullfireAngle = 0
+    }
+  } else if (mainPhase === true) {
+    skullfireAngle += 27.5
+    if (skullfireAngle === 45) {
+      skullfireAngle = 0
+    }
   }
 }
 
-function ripFireskull () {
-  if (fireskullRipCheck === false) {
+function ripFireSkull () {
+  /*if (fireskullRipCheck === false) {
     fireskull[1].alpha -= .33333
     fireskullRipCheck = true
     timeoutmanager.setTimeout(fireskullRipChange, 1000)
     skullHealth = 150
     skullHealth2 = skullHealth2 - 1
-  }
-  if (skullHealth2 < .05) {
+  }*/
+  if (true) {
+    skullHealth = 600
+    singleskullbar.destroy()
+    singleskullbar = fireskull[0].addChild(game.make.sprite(20, 20, 'singleskullbar'))
     timeoutmanager.setTimeout(ripFireskull1, 3000)
     fireskull[1].destroy()
     for (var i = 0; i < 15; i++) {
@@ -1319,29 +1593,37 @@ function ripFireskull () {
     skullCircles = false
     inPlay = false
     if (playernum === 2) {
-      player.x = -400
+      player.x = -100
       player.y = -500
     } else if (playernum === 1) {
       player.x = -700
       player.y = -500
     }
-    fireskull[0].x = -100
+    fireskull[0].x = -400
     fireskull[0].y = -500
   }
 }
 
 function ripFireskull1 () {
-  skullrepeat2 = setInterval(skullCirclefunc2, 2000)
+  skullrepeat2 = setInterval(skullCirclefunc2, 13000)
+  skullArea = game.add.sprite(-400, -500, 'whitecircle')
+  skullArea.tint = 0xFF0000
+  skullArea.anchor.setTo(.5, .5)
+  skullArea.alpha = .25
+  game.physics.arcade.enable(skullArea, Phaser.Physics.ARCADE);
   singleSkullCheck = true
   inPlay = true
-  for (var i = 0; i < 30; i++) {
+  for (var i=0; i<4; i++) {
+    skullfire[i].fireRate = 25
+  }
+  /*for (var i = 0; i < 30; i++) {
     var splitfirex = Math.sin(i * Math.PI / 15) * 200 - 400
     var splitfirey = Math.cos(i * Math.PI / 15) * 200 - 500
     splitFire2[i] = game.add.sprite(splitfirex, splitfirey, 'fire')
     splitFire2[i].scale.setTo(.1)
     splitFire2[i].anchor.setTo(.5, .5)
     game.physics.arcade.enable(splitFire2[i], Phaser.Physics.ARCADE);
-  }
+  }*/
 }
 
 function ripFireskull2 () {
@@ -1353,8 +1635,10 @@ function ripFireskull2 () {
       clearInterval(updateSingleskullBar)
       updateskullbarnum = 1;
     }
-    singleskullbar = fireskull[1].addChild(game.make.sprite(20, 20, 'singleskullbar'))
-    singleskullbar.anchor.setTo(0, 1)
+    if (playernum === 1) {
+      singleskullbar = fireskull[1].addChild(game.make.sprite(20, 20, 'singleskullbar'))
+      singleskullbar.anchor.setTo(0, 1)
+    }
     timeoutmanager.setTimeout(singleskullComboReset, 1000)
     updateSingleskullBar = setInterval(updateSkullBar, 1000)
     var randomskullpos = Math.random() * 2200
@@ -1385,7 +1669,7 @@ function ripFireskull3 () {
 function ripFireskull4 (randomg) {
   inPlay = false
   damageTime = true
-  singleskullCheck = false
+  singleSkullCheck = false
   singleskullComboCheck = false
   singleskullComboCheck2 = 0
   skulldir = 'down'
@@ -1457,7 +1741,7 @@ function endSwipe () {
     }
   }
   swipe.destroy()
-  swipe2.destroy()
+  //swipe2.destroy()
   swipeCheck = false
 }
 
@@ -1465,9 +1749,18 @@ function endSwipe2 () {
   swipeCheck2 = false
 }
 
-function materialSpear () {
+function materialSpear (perma, thatTree) {
+  if (isTrees === true && materialSpearCheck !== 'tree') {
+    thatTree.destroy()
+  }
   materialSpearCheck = 'tree'
   permaspear.loadTexture('materialspear')
+  materialSpearWater = 0
+}
+
+function materialSpearWater () {
+  materialSpearCheck = 'water'
+  materialSpearWater = materialSpearWater + 1
 }
 
 function permafire () {
@@ -1619,12 +1912,19 @@ function update () {
   }
 
   if (deltaTime > 0) {
-    for (var i = 0; i < 4; i++) {
+    for (var i = 0; i < 8; i++) {
       skullfire[i].bullets.forEach(b => b.body.velocity.setTo(b.body.velocity.x / prevdeltaTime * deltaTime, b.body.velocity.y / prevdeltaTime * deltaTime));
-      skullfire[i].bulletSpeed = 150 * deltaTime
+      skullfire[i].bullets.forEach(b => b.body.radius = 2);
+      if (splitFireCheck === true) {
+        skullfire[i].bulletSpeed = 150 * deltaTime
+      } else if (singleSkullCheck === true) {
+        skullfire[i].bulletSpeed = 75 * deltaTime
+      } else if (TPCheck === 'bullets1') {
+        skullfire[i].bulletSpeed = 50 * deltaTime
+      }
     }
     waterfire.bullets.forEach(b => b.body.velocity.setTo(b.body.velocity.x / prevdeltaTime * deltaTime, b.body.velocity.y / prevdeltaTime * deltaTime));
-    waterfire.bulletSpeed = 800 * deltaTime
+    waterfire.bulletSpeed = 300 * deltaTime
   } else {
     console.log('deltaTime = 0')
   }
@@ -1637,32 +1937,65 @@ function update () {
   };
 
   if (invulnerable === false) {
-    for (var i = 0; i < 5; i++) {
-      if (laserCheck === true) {
-        if (laserCheck2 === false) {
-          laserCheck2 = Phaser.Line.intersectsRectangle(laserline, player)
-          if (playernum === 2 && swipeCheck === true) {
-            laserCheck3 = Phaser.Line.intersectsRectangle(laserline, permaspear)
-            if (laserCheck3 === true && materialSpearCheck !== true) {
-              //permafire()
-            }
-          }
-          if (laserCheck2 === true && invulnerable === false && blockCheck === false) {
-            ripHealth()
-          }
+    if (laserCheck === true) {
+      /*for (var i=0; i<10; i++) {
+        var lasersCheck = Phaser.Line.intersectsRectangle(lasersline[i], player)
+        if (lasersCheck === true) {
+          ripHealth()
         }
+      }*/
+      laserCheck2 = Phaser.Line.intersectsRectangle(laserline, player)
+      if (playernum === 2 && swipeCheck === true) {
+        laserCheck3 = Phaser.Line.intersectsRectangle(laserline, permaspear)
+        if (laserCheck3 === true && materialSpearCheck !== true) {
+          //permafire()
+        }
+      }
+      if (laserCheck2 === true && invulnerable === false) {
+        ripHealth()
       }
     }
     //game.physics.arcade.overlap(tree, player.body, ripHealth, null, this);
     for (var i = 0; i < 20; i++) {
-      game.physics.arcade.overlap(forwardFire[i], player, ripHealth, null, this);
+      game.physics.arcade.overlap(forwardFire[i], player, ripHealthBig, null, this);
     }
     for (var i = 0; i < 15; i++) {
-      game.physics.arcade.overlap(splitFire[i], player, ripHealth, null, this);
+      game.physics.arcade.overlap(splitFire[i], player, ripHealthBig, null, this);
     }
   }
 
+  if (auto1Check !== false && auto1Check !== true) {
+    auto1()
+  }
+
   if (gameStart === true) {
+    if (playernum === 2 && bossAction === 'prepare1') {
+      var distance1 = Phaser.Math.distance(player.x, player.y, bowser.x, bowser.y)
+      var distance2 = Phaser.Math.distance(enemies[0].player.x, enemies[0].player.y, bowser.x, bowser.y)
+      if (distance1 < 46) {
+        bossTP(2)
+      } else if (distance2 < 46) {
+        bossTP(1)
+      }
+      if (distance2 > distance1) {
+        game.physics.arcade.moveToObject(bowser, player, 150 * deltaTime)
+      } else {
+        game.physics.arcade.moveToObject(bowser, enemies[0].player, 150 * deltaTime)
+      }
+    } else if (playernum === 2) {
+      bowser.body.velocity.setTo(0, 0)
+    }
+
+    if (TPCheck === 'bullets1') {
+      for (var i = 0; i < 8; i++) {
+        skullfire[i].fireAngle = i*45 - 45 + skullfireAngle
+        skullfire[i].fire(bowser)
+      }
+    }
+    for (var i = 0; i < 8; i++) {
+      game.physics.arcade.overlap(skullfire[i].bullets, player, ripHealthBig, null, this);
+    }
+
     if (laserCheck0 !== false) {
       if (playernum === laserCheck0) {
         laserline = new Phaser.Line(bowser.x, bowser.y, player.x, player.y)
@@ -1687,7 +2020,9 @@ function update () {
       for (var i = 0; i < 15; i++) {
         game.physics.arcade.overlap(waterfire.bullets, splitFire[i], ripbullet, null, this);
       }
-      game.physics.arcade.overlap(waterfire.bullets, fireskull[1], damageSkull, null, this);
+      if (playernum === 1) {
+        game.physics.arcade.overlap(waterfire.bullets, fireskull[1], damageSkull, null, this);
+      }
       for (var i = 0; i < 4; i++) {
         skullfire[i].fireAngle = i*90 - 90 + skullfireAngle
         if (playernum === 2) {
@@ -1695,11 +2030,38 @@ function update () {
         } else {
           skullfire[i].fire(fireskull[1])
         }
-        game.physics.arcade.overlap(skullfire[i].bullets, player, ripHealth, null, this);
+        game.physics.arcade.overlap(skullfire[i].bullets, player, ripHealthBig, null, this);
       }
     }
     if (singleSkullCheck === true) {
-      if (skulldir === 'down') {
+      if (Phaser.Math.distance(player.x, player.y, fireskull[0].x, fireskull[0].y) < 150) {
+        ripHealth()
+      }
+      var skullfirex
+      var skullfirey
+      if (playernum === 1) {
+        skullfirex = fireskull[0].x - player.x
+        skullfirey = fireskull[0].y - player.y
+      } else {
+        skullfirex = fireskull[0].x - enemies[0].player.x
+        skullfirey = fireskull[0].y - enemies[0].player.y
+      }
+      skullfireAngle = Math.atan(skullfirex / skullfirey)
+      if (playernum === 1) {
+        game.physics.arcade.overlap(waterfire.bullets, fireskull[0], damageSkull, null, this);
+        if (player.y > -500) {
+          skullfireAngle = skullfireAngle + Math.PI
+        }
+      } else {
+        if (enemies[0].player.y > -500) {
+          skullfireAngle = skullfireAngle + Math.PI
+        }
+      }
+      for (var i = 0; i < 3; i++) {
+        game.physics.arcade.overlap(skullfire[i].bullets, player, ripHealthBig, null, this);
+        skullfire[i].fireAngle = i*120 - 90 + (skullfireAngle * -180 / Math.PI)
+        skullfire[i].fire(fireskull[0])
+      /*if (skulldir === 'down') {
         fireskull[1].y += 1.5
         if (fireskull[1].y > -250) {
           skulldir = 'left'
@@ -1731,7 +2093,7 @@ function update () {
           } else if (singleskullComboCheck2 > 1.9 && singleskullComboCheck === false) {
             game.physics.arcade.overlap(spear, fireskull[1], ripFireskull3, null, this);
           }
-        }
+        }*/
       }
     }
     /*if (damagebarCheck === true) {
@@ -1742,7 +2104,7 @@ function update () {
     }*/
     if (swipeCheck === true) {
     }
-    game.physics.arcade.overlap(waterfire.bullets, bowser, hitBoss, null, this);
+    //game.physics.arcade.overlap(waterfire.bullets, bowser, hitBoss, null, this);
     if (waterWallCheck1 === true) {
       for (var j = 0; j < 3; j++) {
         if (playernum === 2 && materialSpearCheck !== true && swipeCheck === true) {
@@ -1763,8 +2125,13 @@ function update () {
   }
 
   if (inPlay === true) {
-    if (playernum === 2) {
-      var distance = game.physics.arcade.distanceToPointer(permaspear)
+    if (health < 1) {
+      //health = health + 1/(8*60) * deltaTime
+      //healthbar1.scale.setTo(health, 1)
+    }
+
+    /*if (playernum === 2) {
+      var distance = Phaser.Math.distanceToPointer(permaspear)
       if (distance > 20) {
         game.physics.arcade.moveToPointer(permaspear, 450 * deltaTime)
         permaspear.rotation = game.physics.arcade.angleToPointer(permaspear) + Math.PI * .5
@@ -1781,15 +2148,25 @@ function update () {
         //craftcounter = 0
       }
       if (materialCollectedCheck === true) {
-        game.physics.arcade.overlap(waterfire.bullets, player, hitCraft, null, this);
+        materialCollectedCheck = false
+        craftcounter = craftcounter - 4
+        timeoutmanager.setTimeout(hitCraft, 2000)
       }
       if (isTree === true && swipeCheck === true && materialSpearCheck !== true) {
         game.physics.arcade.overlap(permaspear, tree, materialSpear, null, this);
       }
+      if (isTrees === true && swipeCheck === true && materialSpearCheck !== true) {
+        for (var i = 0; i < 12; i++) {
+          game.physics.arcade.overlap(permaspear, tree[i], materialSpear, null, this);
+        }
+      }
+      if (materialSpearCheck !== 'tree') {
+        game.physics.arcade.overlap(waterfire.bullets, tree, materialSpearWater, null, this);
+      }
       if (materialSpearCheck === 'tree') {
         game.physics.arcade.overlap(permaspear, player, materialSpearReset, null, this);
       }
-    }
+    }*/
   }
 
   if (isTree === true) {
@@ -1802,19 +2179,39 @@ function update () {
     timebomb[3].scale.setTo(timebombTime * 2 / 1300)
   }
 
+  if (timebombvuln === true) {
+    ripHealth()
+    if (Phaser.Math.distance(player.x, player.y, enemies[0].player.x, enemies[0].player.y) < 300) {
+      ripHealth()
+      ripHealth()
+    }
+  }
+
   if (laserCheck0 !== false) {
     laserTime += deltaTime2
     laser2.scale.setTo(laserTime / 700)
+    for (var i=0; i<10; i++) {
+      //lasers2[i].scale.setTo(laserTime * .25 / 700)
+    }
   }
 
   if (skullCircles === true) {
     skullCircleTime += deltaTime2
-    skullCircle[1].scale.setTo(skullCircleTime * .1 / 3500)
+    if (splitFireCheck === true) {
+      skullCircle[1].scale.setTo(skullCircleTime * .1 / 3500)
+    } else if (singleSkullCheck === true) {
+      skullCircle[1].scale.setTo(skullCircleTime * .1 / 13000)
+    }
+
   }
 
-  if (TPCheck === true) {
+  if (TPCheck !==false) {
     TPTime += deltaTime2
-    TPtell[1].scale.setTo(TPTime * .25 / 1000)
+    if (TPCheck === 'left' || TPCheck === 'right') {
+      TPtell[1].scale.setTo(TPTime / 500)
+    } else {
+      TPtell[1].scale.setTo(TPTime / 300)
+    }
   }
 
   if (forwardFirewallCheck === true) {
@@ -1840,9 +2237,10 @@ function update () {
         game.physics.arcade.overlap(fireskull[1], greenarea, changeredarea, null, this);
       }
     }
+    console.log(moveCheck)
     if (moveCheck === true) {
-      if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) && blockCheck2 === false) {
-        moveCheck = false;
+      if (game.input.keyboard.isDown(Phaser.Keyboard.V) && blockCheck2 === false) {
+        moveCheck = 'block';
         blockCheck = true;
         blockCheck2 = true;
         player.loadTexture('redsquare', 0)
@@ -1850,33 +2248,44 @@ function update () {
         timeoutmanager.setTimeout(blockReset2, 1000)
       }
 
+      if (dodgeCheck === 'dodge') {
+        var deltaTime3 = deltaTime * 4
+      } else {
+        var deltaTime3 = deltaTime
+      }
+
+      var movevec = [0,0]
+
       if (game.input.keyboard.isDown(Phaser.Keyboard.A)) {
-          player.x -= 4 * deltaTime
-          if (mainPhase === false) {
-            player.angle = 90
-          }
+        if (mainPhase === false || player.x > -750) {
+          movevec[0] -= 1
+        }
       };
 
       if (game.input.keyboard.isDown(Phaser.Keyboard.D)) {
-        player.x += 4 * deltaTime
-        if (mainPhase === false) {
-          player.angle = -90
+        if (mainPhase === false || player.x < -50) {
+          movevec[0] += 1
         }
       };
 
       if (game.input.keyboard.isDown(Phaser.Keyboard.W)) {
-        player.y -= 4 * deltaTime
-        if (mainPhase === false) {
-          player.angle = 180
+        if (mainPhase === false || player.y > -700) {
+          movevec[1] -= 1
         }
       };
 
       if (game.input.keyboard.isDown(Phaser.Keyboard.S)) {
-        player.y += 4 * deltaTime
+        movevec[1] += 1
         if (mainPhase === false) {
           player.angle = 0
         }
-      };
+      }
+
+      var normalize1 = Math.sqrt((movevec[0] ** 2) + (movevec[1] ** 2))
+      if (normalize1 !== 0) {
+        player.x += movevec[0] * 2 / normalize1 * deltaTime3
+        player.y += movevec[1] * 2 / normalize1 * deltaTime3
+      }
 
       if (game.input.keyboard.isDown(Phaser.Keyboard.E)) {
         if (playernum === 1 && waterCheck === false) {
@@ -1900,19 +2309,24 @@ function update () {
         }
       }
     }
+    if (moveCheck === 'bosstp') {
+      var movevec = [0, 0]
+      movevec[0] = player.x - bowser.x
+      movevec[1] = player.y - bowser.y
+      var norm = Math.sqrt(movevec[0] * movevec[0]+ movevec[1] * movevec[1]);
+      if (norm != 0) { // as3 return 0,0 for a point of zero length
+        movevec[0] = movevec[0] / norm;
+        movevec[1] = movevec[1] / norm;
+      }
+      console.log(movevec)
+      player.x += movevec[0] * 4 * deltaTime
+      player.y += movevec[1] * 4 * deltaTime
+    }
 
     if (game.input.activePointer.leftButton.isDown) {
-      if (realityCheck === true && Math.abs(game.input.activePointer.worldX - realityPoint.x) < 6 && Math.abs(game.input.activePointer.worldY - realityPoint.y) < 6) {
-        realityPoint.destroy()
-        realityPower += 1
-        if (realityPower < 9.5) {
-          realityAct()
-        }
-      } else if (playernum === 1) {
-        if (fountainCheck === false) {
-          waterfire.fire(player, game.input.activePointer.worldX, game.input.activePointer.worldY);
-        }
+      if (playernum === 1 && auto1Check === false) {
         socket.emit('waterfire', {x: game.input.activePointer.worldX, y: game.input.activePointer.worldY})
+        //waterfire.fire(player, game.input.activePointer.worldX, game.input.activePointer.worldY)
       } else if (playernum === 2 && swipeCheck2 === false) {
         swipe = player.addChild(game.make.sprite(0, 16, 'halfcircle'))
         swipe.angle = swipe.angle - 180
@@ -1921,17 +2335,17 @@ function update () {
         swipe.alpha = .5
         swipe.tint = 0xFF1493
         game.physics.arcade.enable(swipe, Phaser.Physics.ARCADE);
-        swipe2 = permaspear.addChild(game.make.sprite(0, -16, 'halfcircle'))
-        swipe2.angle = swipe.angle - 180
-        swipe2.scale.setTo(.2)
-        swipe2.anchor.setTo(.5, 1)
-        swipe2.alpha = .5
-        swipe2.tint = 0xFF1493
-        game.physics.arcade.enable(swipe2, Phaser.Physics.ARCADE);
+        //swipe2 = permaspear.addChild(game.make.sprite(0, -16, 'halfcircle'))
+        //swipe2.angle = swipe.angle - 180
+        //swipe2.scale.setTo(.2)
+        //swipe2.anchor.setTo(.5, 1)
+        //swipe2.alpha = .5
+        //swipe2.tint = 0xFF1493
+        //game.physics.arcade.enable(swipe2, Phaser.Physics.ARCADE);
         swipeCheck = true
         swipeCheck2 = true
         timeoutmanager.setTimeout(endSwipe, 500)
-        timeoutmanager.setTimeout(endSwipe2, 1000)
+        //timeoutmanager.setTimeout(endSwipe2, 1000)
       }
     }
 
@@ -1973,7 +2387,18 @@ function update () {
     }*/
 
     if (game.input.activePointer.rightButton.isDown) {
-      if (playernum === 2 && spearCheck === false && spearCounter > .9) {
+      //var distance = Math.sqrt((Math.abs(game.input.activePointer.worldX - player.x))**2 + (Math.abs(game.input.activePointer.worldY - player.y))**2)
+      if (dodgeCheck === false) {
+        //var playxmove = player.x + (game.input.activePointer.worldX - player.x) * 48 / distance
+        //var playymove = player.y + (game.input.activePointer.worldY - player.y) * 48 / distance
+        //player.x = playxmove
+        //player.y = playymove
+        dodgeCheck = 'dodge'
+        timeoutmanager.setTimeout(dodgeReset2, 150)
+        timeoutmanager.setTimeout(dodgeReset, 500)
+      }
+
+      /*if (playernum === 2 && spearCheck === false && spearCounter > .9) {
         spearCounter = spearCounter - 1
         woodspear[spearCounter].alpha = 0
         spear = game.add.sprite(player.x, player.y, 'bowser')
@@ -1993,8 +2418,8 @@ function update () {
         speardata[3] = spearyvel
         socket.emit('spearOn', speardata)
       }
-      if (playernum === 1 && waterCheck === false/* && realityPower > 9.5*/) {
-        if (greenareaCheck === false) {
+      if (playernum === 1 && waterCheck === false && realityPower > 9.5) {
+      /*  if (greenareaCheck === false) {
           greenarea = game.add.sprite(game.input.activePointer.worldX, game.input.activePointer.worldY, 'greenarea')
           greenarea.scale.setTo(.1)
           greenarea.alpha = .2
@@ -2026,6 +2451,7 @@ function update () {
     } else if (greenareaCheck === true) {
       greenarea.destroy()
       greenareaCheck = false
+    }*/
     }
   }
 
@@ -2047,24 +2473,34 @@ function update () {
   game.physics.arcade.velocityFromRotation(player.rotation, currentSpeed, player.body.velocity)
 
   if (currentSpeed > 0) {
-    player.animations.play('move')
+    //player.animations.play('move')
   } else {
-    player.animations.play('stop')
+    //player.animations.play('stop')
   }
 
   //land.tilePosition.x = -game.camera.x
   //land.tilePosition.y = -game.camera.y
 
   socket.emit('move player', { playerType: 'player', x: player.x, y: player.y, angle: player.angle })
-  if (playernum === 2) {
-    socket.emit('move player', { playerType: 'permaspear', x: permaspear.x, y: permaspear.y, angle: permaspear.angle })
+  if (playernum === 2 && gameStart === true) {
+    socket.emit('move player', { playerType: 'permaspear', x: bowser.x, y: bowser.y, angle: bowser.angle })
   }
+}
+
+function normalize(point) {
+  var norm = Math.sqrt(point.x * point.x + point.y * point.y);
+  var movevec = [0, 0]
+  if (norm != 0) { // as3 return 0,0 for a point of zero length
+    movevec[0] = point.x / norm;
+    movevec[1] = point.y / norm;
+  }
+  return [movevec[0], movevec[1]]
 }
 
 function render () {
   if (gameStart === true) {
-    game.debug.bodyInfo(player, 32, 32);
-    game.debug.body(player);
+    //game.debug.bodyInfo(player, 32, 32);
+    //game.debug.body(player);
   }
   game.debug.text(game.time.fps || '--', 2, 14, "#00ff00");
 }
