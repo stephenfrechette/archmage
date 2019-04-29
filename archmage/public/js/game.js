@@ -575,6 +575,8 @@ function create () {
   window.spearCounter = 0
   window.TPtell = []
   window.TPCheck = false
+  window.tp1time = 7.5
+  window.tp2time = 5.5
   window.TPTime = 0
   window.dodgeCheck = false
   window.blockCheck = false
@@ -914,13 +916,13 @@ function bossTP1(targettp2) {
   }
   TPCheck = 'left'
   bossAction = 'tp'
-  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 500)
-  timeoutmanager.setTimeout(function(){ bossTP2(); }, 800)
-  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 1300)
-  timeoutmanager.setTimeout(function(){ bossTP3(); }, 1700)
-  timeoutmanager.setTimeout(function(){ bossTPReset(); }, 2000)
-  timeoutmanager.setTimeout(function(){ bossTP4(); }, 2200)
-  timeoutmanager.setTimeout(function(){ bossTPReset2(); }, 5000)
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, tp1time * 100)
+  timeoutmanager.setTimeout(function(){ bossTP2(); }, tp1time * 100 + 300)
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, tp1time * 200 + 300)
+  timeoutmanager.setTimeout(function(){ bossTP3(); }, tp1time * 200 + 600)
+  timeoutmanager.setTimeout(function(){ bossTPReset(); }, tp1time * 200 + 600 + tp2time * 100)
+  timeoutmanager.setTimeout(function(){ bossTP4(); }, tp1time * 200 + 1000 + tp2time * 100)
+  timeoutmanager.setTimeout(function(){ bossTPReset2(); }, tp1time * 200 + 10000 + tp2time * 100)
 }
 
 function bossTPReset() {
@@ -1920,7 +1922,7 @@ function update () {
       } else if (singleSkullCheck === true) {
         skullfire[i].bulletSpeed = 75 * deltaTime
       } else if (TPCheck === 'bullets1') {
-        skullfire[i].bulletSpeed = 50 * deltaTime
+        skullfire[i].bulletSpeed = 100 * deltaTime
       }
     }
     waterfire.bullets.forEach(b => b.body.velocity.setTo(b.body.velocity.x / prevdeltaTime * deltaTime, b.body.velocity.y / prevdeltaTime * deltaTime));
@@ -2208,9 +2210,9 @@ function update () {
   if (TPCheck !==false) {
     TPTime += deltaTime2
     if (TPCheck === 'left' || TPCheck === 'right') {
-      TPtell[1].scale.setTo(TPTime / 500)
+      TPtell[1].scale.setTo(TPTime / (tp1time * 100))
     } else {
-      TPtell[1].scale.setTo(TPTime / 300)
+      TPtell[1].scale.setTo(TPTime / (tp2time * 100))
     }
   }
 
